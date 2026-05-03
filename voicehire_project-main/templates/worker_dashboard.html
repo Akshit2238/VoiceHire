@@ -104,7 +104,14 @@
                         {{ t('Active as') }} <span class="font-bold text-secondary">{{ worker.work }}</span> {{ t('in') }} {{ worker.location }}
                     </p>
                 </div>
-                <span class="vh-badge-active self-start sm:self-auto">{{ t('Active Now') }}</span>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <button id="availability-toggle" onclick="app.toggleAvailability({{ 'true' if worker.is_available else 'false' }})" 
+                        class="flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-all {{ 'bg-green-100 text-green-700 border border-green-200' if worker.is_available else 'bg-slate-100 text-slate-500 border border-slate-200' }}">
+                        <span class="material-symbols-outlined text-[20px]">{{ 'check_circle' if worker.is_available else 'do_not_disturb_on' }}</span>
+                        <span>{{ t('Available') if worker.is_available else t('Busy') }}</span>
+                    </button>
+                    <span class="vh-badge-active">{{ t('Active Now') }}</span>
+                </div>
             </div>
 
             <!-- ═══ TWO-PANE LAYOUT ═══ -->
@@ -120,7 +127,12 @@
                                 <span class="material-symbols-outlined text-4xl">person</span>
                             </div>
                             <div>
-                                <h3 class="font-bold text-xl">{{ worker.name }}</h3>
+                                <h3 class="font-bold text-xl flex items-center gap-2">
+                                    {{ worker.name }}
+                                    {% if worker.is_verified %}
+                                    <span class="material-symbols-outlined text-green-600 text-xl" title="{{ t('Verified') }}">verified</span>
+                                    {% endif %}
+                                </h3>
                                 <p class="text-on-surface-variant text-sm flex items-center gap-1">
                                     <span class="material-symbols-outlined text-sm">work</span>
                                     {{ worker.work }}
@@ -199,7 +211,12 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('Location') }}</label>
-                                    <input type="text" name="location" value="{{ worker.location }}" required class="w-full border-slate-300 rounded-lg focus:ring-secondary focus:border-secondary">
+                                    <div class="relative">
+                                        <input type="text" name="location" id="edit-w-loc" value="{{ worker.location }}" required class="w-full border-slate-300 rounded-lg focus:ring-secondary focus:border-secondary pr-10">
+                                        <button type="button" onclick="app.detectLocation('edit-w-loc')" class="absolute right-3 top-2.5 text-secondary">
+                                            <span class="material-symbols-outlined text-[20px]">my_location</span>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('Phone Number') }}</label>
@@ -217,6 +234,17 @@
                                     <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('Update Video (optional)') }}</label>
                                     <input type="file" name="video" accept="video/*" class="w-full text-sm">
                                 </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('ID Proof (Aadhaar/Voter ID)') }}</label>
+                                    <input type="file" name="id_proof" accept="image/*" class="w-full text-sm">
+                                    {% if worker.id_proof_path %}
+                                    <p class="text-[10px] text-green-600 mt-1 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-xs">check_circle</span> {{ t('ID Proof Uploaded') }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <input type="hidden" name="latitude" id="w-lat" value="{{ worker.latitude or '' }}">
+                                <input type="hidden" name="longitude" id="w-lng" value="{{ worker.longitude or '' }}">
                                 <button type="submit" id="btn-update-worker" class="w-full bg-primary text-white font-bold py-3 rounded-lg hover:opacity-90 mt-2">
                                     {{ t('Save Changes') }}
                                 </button>
@@ -252,21 +280,21 @@
     <nav class="vh-bottom-nav">
         <button class="vh-bottom-nav-item active">
             <span class="material-symbols-outlined">work</span>
-            <span>Jobs</span>
+            <span>{{ t('Jobs') }}</span>
         </button>
         <button class="vh-bottom-nav-item" onclick="document.getElementById('profile-section').scrollIntoView({behavior:'smooth'})">
             <span class="material-symbols-outlined">account_circle</span>
-            <span>Profile</span>
+            <span>{{ t('Profile') }}</span>
         </button>
         {% if worker.voice_note or worker.video %}
         <button class="vh-bottom-nav-item" onclick="document.getElementById('portfolio-section').scrollIntoView({behavior:'smooth'})">
             <span class="material-symbols-outlined">perm_media</span>
-            <span>Portfolio</span>
+            <span>{{ t('Portfolio') }}</span>
         </button>
         {% endif %}
         <button class="vh-bottom-nav-item" onclick="window.location.href='/logout'">
             <span class="material-symbols-outlined">logout</span>
-            <span>Sign Out</span>
+            <span>{{ t('Sign Out') }}</span>
         </button>
     </nav>
 

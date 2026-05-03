@@ -2,6 +2,8 @@ let selectedRole = localStorage.getItem('voicehire_role') || 'user';
 let aiStep = 0;
 let aiActive = false;
 
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
 const app = {
     init() {
         this.bindEvents();
@@ -106,6 +108,20 @@ const app = {
         btn.disabled = true;
 
         const formElement = document.getElementById('worker-signup-form');
+        
+        // Ensure we have lat/lng
+        const lat = document.getElementById('w-lat').value;
+        const lng = document.getElementById('w-lng').value;
+        const location = document.getElementById('w-location').value;
+        
+        if (!lat || !lng) {
+            const coords = await this.geocodeAddress(location);
+            if (coords) {
+                document.getElementById('w-lat').value = coords.lat;
+                document.getElementById('w-lng').value = coords.lon;
+            }
+        }
+
         const formData = new FormData(formElement);
 
         try {
@@ -140,11 +156,41 @@ const app = {
         } catch (e) {}
     },
 
+    async toggleAvailability(current) {
+        const newState = !current;
+        try {
+            const res = await fetch('/api/worker/availability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_available: newState })
+            });
+            if (res.ok) {
+                location.reload();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    async t(text) {
+        try {
+            const res = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+            const data = await res.json();
+            return data.translated;
+        } catch (e) {
+            return text;
+        }
+    },
+
     // ---------------- AI CONVERSATIONAL ASSISTANT ---------------- //
 
     startStepByStepAI() {
-        if (!('webkitSpeechRecognition' in window)) {
-            alert('Your browser does not support full AI features. Please use Google Chrome.');
+        if (!SpeechRecognition) {
+            alert('Your browser does not support full AI features. Please use Google Chrome or a modern browser.');
             return;
         }
 
@@ -212,7 +258,8 @@ const app = {
     },
 
     listenForAnswer() {
-        const recognition = new webkitSpeechRecognition();
+        if (!SpeechRecognition) return;
+        const recognition = new SpeechRecognition();
         const lang = this.getCurrentLang();
         recognition.lang = this.getSpeechLangCode(lang);
         recognition.interimResults = false;
@@ -240,11 +287,11 @@ const app = {
     },
 
     listenForInput(targetId) {
-        if (!('webkitSpeechRecognition' in window)) {
+        if (!SpeechRecognition) {
             alert('Speech recognition not supported in this browser.');
             return;
         }
-        const recognition = new webkitSpeechRecognition();
+        const recognition = new SpeechRecognition();
         const lang = this.getCurrentLang();
         recognition.lang = this.getSpeechLangCode(lang);
         
@@ -387,13 +434,8 @@ const app = {
             }
         }
         else if (aiStep === 4) {
-            if (trimmed) {
-                document.getElementById('w-password').value = trimmed;
-                aiStep++;
-            } else {
-                this.speak(retryPrompt, () => { this.askNextQuestion(); });
-                return;
-            }
+            // Password step removed for security and accessibility
+            aiStep++;
         }
         
         setTimeout(() => { this.askNextQuestion(); }, 1500);
@@ -412,12 +454,13 @@ const app = {
         const description = document.getElementById('j-desc').value;
         const locationElem = document.getElementById('j-loc');
         const location = locationElem ? locationElem.value : 'Unknown';
+        const is_urgent = document.getElementById('j-urgent')?.checked || false;
 
         try {
             const res = await fetch('/api/jobs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ service_type, description, location })
+                body: JSON.stringify({ service_type, description, location, is_urgent })
             });
             if (res.ok) {
                 alert("Job request posted successfully! Workers will see it.");
@@ -630,13 +673,187 @@ const app = {
     },
 
     showReviewModal(jobId, workerId) {
-        const rating = prompt("Rate the worker from 1 to 5:");
-        if (!rating || isNaN(rating) || rating < 1 || rating > 5) {
-            alert("Valid rating required.");
+        const modal = document.getElementById('review-modal');
+        if (!modal) return;
+        
+        document.getElementById('rev-job-id').value = jobId;
+        document.getElementById('rev-worker-id').value = workerId;
+        document.getElementById('rev-text').value = '';
+        this.setRating(0);
+        
+        modal.classList.remove('hidden');
+    },
+
+    closeReviewModal() {
+        const modal = document.getElementById('review-modal');
+        if (modal) modal.classList.add('hidden');
+    },
+
+    setRating(val) {
+        document.getElementById('rev-rating').value = val;
+        const stars = document.querySelectorAll('.star-btn');
+        stars.forEach((s, idx) => {
+            if (idx < val) {
+                s.classList.remove('text-slate-300');
+                s.classList.add('text-yellow-400');
+            } else {
+                s.classList.add('text-slate-300');
+                s.classList.remove('text-yellow-400');
+            }
+        });
+    },
+
+    async submitReviewFromModal() {
+        const jobId = document.getElementById('rev-job-id').value;
+        const workerId = document.getElementById('rev-worker-id').value;
+        const rating = document.getElementById('rev-rating').value;
+        const review = document.getElementById('rev-text').value;
+
+        if (!rating || rating == 0) {
+            alert("Please select a star rating.");
             return;
         }
-        const review = prompt("Leave a short review (optional):");
-        this.submitReview(workerId, jobId, rating, review);
+
+        await this.submitReview(workerId, jobId, rating, review);
+        this.closeReviewModal();
+        this.fetchCustomerJobs();
+    },
+
+    setServiceFilter(val) {
+        const input = document.getElementById('u-service');
+        if (input) {
+            input.value = (val === 'All') ? '' : val;
+            this.fetchWorkers();
+        }
+    },
+
+    detectLocation(targetId) {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            return;
+        }
+
+        const input = document.getElementById(targetId);
+        const icon = input.parentElement.querySelector('.material-symbols-outlined');
+        if (icon) icon.classList.add('animate-pulse', 'text-secondary');
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            try {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                // Save coordinates if hidden fields exist
+                const latField = document.getElementById('w-lat');
+                const lngField = document.getElementById('w-lng');
+                if (latField) latField.value = lat;
+                if (lngField) lngField.value = lon;
+
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+                const data = await res.json();
+                
+                const loc = data.address.city || data.address.town || data.address.village || data.address.suburb || "Unknown";
+                if (input) input.value = loc;
+            } catch (e) {
+                alert("Could not detect location automatically.");
+            } finally {
+                if (icon) icon.classList.remove('animate-pulse', 'text-secondary');
+            }
+        }, () => {
+            alert("Location access denied.");
+            if (icon) icon.classList.remove('animate-pulse', 'text-secondary');
+        });
+    },
+
+    // ---------------- MAP VIEW ---------------- //
+    map: null,
+    markers: [],
+
+    toggleView(view) {
+        const listDiv = document.getElementById('workers-list');
+        const mapContainer = document.getElementById('map-container');
+        const btnList = document.getElementById('btn-list-view');
+        const btnMap = document.getElementById('btn-map-view');
+
+        if (view === 'map') {
+            listDiv.style.display = 'none';
+            mapContainer.style.display = 'block';
+            btnMap.className = 'flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold transition-all shadow-sm';
+            btnList.className = 'flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-all';
+            
+            this.initMap();
+        } else {
+            listDiv.style.display = 'grid';
+            mapContainer.style.display = 'none';
+            btnList.className = 'flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold transition-all shadow-sm';
+            btnMap.className = 'flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-all';
+        }
+    },
+
+    initMap() {
+        if (this.map) {
+            this.map.invalidateSize();
+            return;
+        }
+
+        // Default to India center if no workers
+        this.map = L.map('map-view').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(this.map);
+
+        this.updateMapMarkers();
+    },
+
+    updateMapMarkers() {
+        if (!this.map) return;
+        
+        // Clear existing markers
+        this.markers.forEach(m => this.map.removeLayer(m));
+        this.markers = [];
+
+        const workers = this.lastFetchedWorkers || [];
+        const validWorkers = workers.filter(w => w.latitude && w.longitude);
+
+        if (validWorkers.length > 0) {
+            const group = new L.featureGroup();
+            validWorkers.forEach(w => {
+                const marker = L.marker([w.latitude, w.longitude]).addTo(this.map);
+                marker.bindPopup(`
+                    <div class="p-2 min-w-[150px]">
+                        <h4 class="font-bold text-sm flex items-center gap-1">
+                            ${w.name}
+                            ${w.is_verified ? '<span class="material-symbols-outlined text-green-600 text-sm">verified</span>' : ''}
+                        </h4>
+                        <p class="text-xs text-slate-500">${w.work}</p>
+                        <p class="text-xs text-slate-400 mb-2">${w.location}</p>
+                        <div class="flex gap-2">
+                            <a href="tel:${w.phone}" class="bg-primary text-white p-1 rounded-full flex items-center justify-center w-8 h-8">
+                                <span class="material-symbols-outlined text-sm">call</span>
+                            </a>
+                            <a href="https://wa.me/91${w.phone}" target="_blank" class="bg-green-500 text-white p-1 rounded-full flex items-center justify-center w-8 h-8">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" class="w-4 h-4 filter brightness-0 invert">
+                            </a>
+                        </div>
+                    </div>
+                `);
+                this.markers.push(marker);
+                group.addLayer(marker);
+            });
+            this.map.fitBounds(group.getBounds().pad(0.1));
+        }
+    },
+
+    async geocodeAddress(address) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+                return { lat: data[0].lat, lon: data[0].lon };
+            }
+        } catch (e) {
+            console.error("Geocoding error:", e);
+        }
+        return null;
     },
 
     async submitReview(workerId, jobId, rating, review) {
@@ -679,13 +896,18 @@ const app = {
         try {
             const response = await fetch(url);
             const workers = await response.json();
+            this.lastFetchedWorkers = workers; // Store for map view
 
             listDiv.innerHTML = '';
 
             if (workers.length === 0) {
                 listDiv.innerHTML = `<div class="text-slate-400 italic">No workers found.</div>`;
+                if (this.map) this.updateMapMarkers();
                 return;
             }
+
+            // Update map if initialized
+            if (this.map) this.updateMapMarkers();
 
             workers.forEach(w => {
                 const card = document.createElement('div');
@@ -704,15 +926,31 @@ const app = {
 
                 const textDiv = document.createElement('div');
                 const nameLabel = document.createElement('h4');
-                nameLabel.className = 'font-bold text-lg text-primary';
-                nameLabel.textContent = w.name;
+                nameLabel.className = 'font-bold text-lg text-primary flex items-center gap-1';
+                nameLabel.innerHTML = `
+                    ${w.name}
+                    ${w.is_verified ? '<span class="material-symbols-outlined text-green-600 text-[20px]" title="Verified">verified</span>' : ''}
+                `;
                 textDiv.appendChild(nameLabel);
 
                 if (w.review_count > 0) {
                     const ratingSpan = document.createElement('div');
-                    ratingSpan.className = 'text-sm text-yellow-600 font-bold mb-1';
-                    ratingSpan.textContent = `★ ${parseFloat(w.avg_rating).toFixed(1)} (${w.review_count} reviews)`;
+                    ratingSpan.className = 'text-sm mb-1 flex items-center gap-1';
+                    
+                    const avg = parseFloat(w.avg_rating);
+                    const stars = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
+                    
+                    ratingSpan.innerHTML = `
+                        <span class="text-yellow-500 font-bold">${stars}</span>
+                        <span class="text-slate-600 font-medium">${avg.toFixed(1)}</span>
+                        <span class="text-slate-400 text-xs">(${w.review_count} reviews)</span>
+                    `;
                     textDiv.appendChild(ratingSpan);
+                } else {
+                    const noRating = document.createElement('div');
+                    noRating.className = 'text-xs text-slate-400 italic mb-1';
+                    noRating.textContent = 'No reviews yet';
+                    textDiv.appendChild(noRating);
                 }
 
                 const tagsDiv = document.createElement('div');
@@ -734,13 +972,25 @@ const app = {
 
                 infoWrapper.appendChild(textDiv);
 
+                const actionsWrapper = document.createElement('div');
+                actionsWrapper.className = 'flex items-center gap-2';
+
+                const waBtn = document.createElement('a');
+                waBtn.href = `https://wa.me/91${w.phone}`;
+                waBtn.target = '_blank';
+                waBtn.className = 'w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-sm';
+                waBtn.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" class="w-5 h-5 filter brightness-0 invert" alt="WA">`;
+
                 const callBtn = document.createElement('a');
                 callBtn.href = `tel:${w.phone}`;
                 callBtn.className = 'w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-sm';
                 callBtn.innerHTML = `<span class="material-symbols-outlined">call</span>`;
 
+                actionsWrapper.appendChild(waBtn);
+                actionsWrapper.appendChild(callBtn);
+
                 headerDiv.appendChild(infoWrapper);
-                headerDiv.appendChild(callBtn);
+                headerDiv.appendChild(actionsWrapper);
                 card.appendChild(headerDiv);
 
                 if (w.voice_note || w.video) {
@@ -784,6 +1034,20 @@ const app = {
         if(btn) { btn.innerHTML = "Saving..."; btn.disabled = true; }
 
         const formElement = document.getElementById('worker-edit-form');
+        
+        // Ensure we have lat/lng
+        const lat = document.getElementById('w-lat').value;
+        const lng = document.getElementById('w-lng').value;
+        const location = document.getElementById('edit-w-loc').value;
+        
+        if (!lat || !lng) {
+            const coords = await this.geocodeAddress(location);
+            if (coords) {
+                document.getElementById('w-lat').value = coords.lat;
+                document.getElementById('w-lng').value = coords.lon;
+            }
+        }
+
         const formData = new FormData(formElement);
 
         try {

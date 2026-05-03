@@ -98,7 +98,19 @@ TRANSLATIONS = {
         "Terms": "शर्तें",
         "Support": "सहायता",
         "Contact": "संपर्क",
-        "Accessibility First": "पहुंच पहले"
+        "Accessibility First": "पहुंच पहले",
+        "All": "सब",
+        "Plumber": "प्लम्बर",
+        "Electrician": "इलेक्ट्रीशियन",
+        "Maid": "नौकरानी",
+        "Painter": "पेंटर",
+        "Carpenter": "बढ़ई",
+        "Urgent - Need Today": "अति आवश्यक - आज ही चाहिए",
+        "Rate your Experience": "अपने अनुभव को रेट करें",
+        "Tell others how it went...": "दूसरों को बताएं कि यह कैसा रहा...",
+        "Submit Review": "समीक्षा सबमिट करें",
+        "Available": "उपलब्ध",
+        "Busy": "व्यस्त"
     },
     'bn': { # Bengali
         "Find Help or": "সাহায্য খুঁজুন বা",
@@ -334,7 +346,19 @@ TRANSLATIONS = {
         "Optional": "اختیاری",
         "Start Voice Setup": "وائس سیٹ اپ شروع کریں",
         "My Jobs": "میرے کام",
-        "Sign Out": "سائن آؤٹ"
+        "Sign Out": "سائن آؤٹ",
+        "All": "سب",
+        "Plumber": "پلمبر",
+        "Electrician": "الیکٹریشن",
+        "Maid": "ملازمہ",
+        "Painter": "پینٹر",
+        "Carpenter": "بڑھئی",
+        "Urgent - Need Today": "انتہائی ضروری - آج ہی ضرورت ہے",
+        "Rate your Experience": "اپنے تجربے کی درجہ بندی کریں",
+        "Tell others how it went...": "دوسروں کو بتائیں کہ کیسا رہا...",
+        "Submit Review": "جائزہ جمع کرائیں",
+        "Available": "دستیاب",
+        "Busy": "مصروف"
     },
     'gu': { # Gujarati
         "Find Help or": "મદદ શોધો અથવા",
