@@ -1,4 +1,4 @@
 {
     "python.terminal.useEnvFile": true,
-    "python.envFile": "${workspaceFolder}/voicehire_project-main/.env"
+    "python.envFile": "${workspaceFolder}/.env"
 }
