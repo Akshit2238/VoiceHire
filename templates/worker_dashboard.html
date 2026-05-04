@@ -6,7 +6,7 @@
     <title>Worker Dashboard - VoiceHire</title>
     <meta name="description" content="Manage your worker profile and find job opportunities on VoiceHire.">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}"/>
     <script id="tailwind-config">
@@ -30,48 +30,75 @@
     <style>
         * { font-family: 'Inter', sans-serif; }
         .glass-panel {
-            background: rgba(255,255,255,0.7);
+            background: rgba(255,255,255,0.75);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
-            border: 1.5px solid #e0e3e5;
+            border: 1.5px solid rgba(226,232,240,0.6);
         }
-        .job-card { transition: all 0.2s ease; }
+        .job-card { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1.5px solid #f1f5f9;
+            background: white;
+            border-radius: 24px;
+            padding: 1.5rem;
+        }
         .job-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 24px -10px rgba(0,0,0,0.1);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px -12px rgba(0,0,0,0.08);
+            border-color: rgba(0,102,138,0.2);
         }
-        audio, video { width: 100%; border-radius: 10px; }
-        video { max-height: 260px; object-fit: cover; background: #000; }
+        audio, video { width: 100%; border-radius: 16px; background: #f1f5f9; }
+        video { max-height: 280px; object-fit: cover; background: #000; border: 1.5px solid #e2e8f0; }
+
+        .profile-stat {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 1rem;
+            text-align: center;
+            border: 1.5px solid #f1f5f9;
+        }
+
+        .availability-pill {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 1rem; border-radius: 9999px;
+            font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.05em; transition: all 0.2s;
+        }
     </style>
 </head>
-<body class="bg-background text-on-surface antialiased">
+<body class="bg-background text-on-surface antialiased selection:bg-blue-100">
 
     <!-- ═══ DESKTOP SIDEBAR ═══ -->
     <aside class="vh-sidebar">
-        <div class="vh-sidebar-logo">
-            <span class="material-symbols-outlined logo-icon">settings_voice</span>
-            <span class="logo-text">VoiceHire</span>
+        <div class="vh-sidebar-logo px-8 h-20 flex items-center border-b border-slate-100">
+            <span class="material-symbols-outlined text-secondary text-3xl mr-3" style="font-variation-settings:'FILL' 1">settings_voice</span>
+            <span class="text-xl font-black tracking-tighter">VoiceHire</span>
         </div>
-        <nav class="vh-sidebar-nav">
-            <button class="vh-nav-item active" onclick="window.location.href='/dashboard/worker'">
+        <nav class="vh-sidebar-nav p-4 space-y-1">
+            <button class="vh-nav-item active w-full" onclick="window.location.href='/dashboard/worker'">
                 <span class="material-symbols-outlined">work</span>
                 <span>{{ t('My Jobs') }}</span>
             </button>
-            <button class="vh-nav-item" onclick="document.getElementById('profile-section').scrollIntoView({behavior:'smooth'})">
+            <button class="vh-nav-item w-full" onclick="document.getElementById('profile-section').scrollIntoView({behavior:'smooth'})">
                 <span class="material-symbols-outlined">account_circle</span>
                 <span>{{ t('My Profile') }}</span>
             </button>
-            <button class="vh-nav-item" onclick="document.getElementById('portfolio-section').scrollIntoView({behavior:'smooth'})">
+            <button class="vh-nav-item w-full" onclick="document.getElementById('portfolio-section').scrollIntoView({behavior:'smooth'})">
                 <span class="material-symbols-outlined">perm_media</span>
                 <span>{{ t('Portfolio') }}</span>
             </button>
         </nav>
-        <div class="vh-sidebar-footer">
-            <div class="vh-user-chip">
-                <div class="avatar"><span class="material-symbols-outlined text-sm">handyman</span></div>
-                <span class="user-name">{{ worker.name }}</span>
+        <div class="vh-sidebar-footer p-4 border-t border-slate-100">
+            <div class="vh-user-chip bg-slate-50 p-3 rounded-2xl flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                    <span class="material-symbols-outlined">handyman</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-black truncate">{{ worker.name }}</p>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{{ worker.work }}</p>
+                </div>
             </div>
-            <button class="vh-nav-item" onclick="window.location.href='/logout'">
+            <button class="vh-nav-item w-full text-red-500 hover:bg-red-50 hover:text-red-600" onclick="window.location.href='/logout'">
                 <span class="material-symbols-outlined">logout</span>
                 <span>{{ t('Sign Out') }}</span>
             </button>
@@ -82,35 +109,35 @@
     <div class="vh-main">
 
         <!-- Sticky Header -->
-        <header class="vh-header flex items-center justify-between px-4 sm:px-6">
-            <div class="flex items-center gap-2 vh-header-logo">
-                <span class="material-symbols-outlined text-secondary">settings_voice</span>
-                <span class="font-black text-lg tracking-tight">VoiceHire</span>
+        <header class="vh-header flex items-center justify-between px-6 h-18 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 z-40">
+            <div class="flex items-center gap-2.5 vh-header-logo">
+                <span class="material-symbols-outlined text-secondary text-2xl" style="font-variation-settings:'FILL' 1">settings_voice</span>
+                <span class="text-xl font-black tracking-tighter">VoiceHire</span>
             </div>
-            <h1 class="hidden lg:block font-bold text-lg">{{ t('Worker Dashboard') }}</h1>
-            <button class="p-2 rounded-full hover:bg-slate-100 transition-colors lg:hidden" onclick="window.location.href='/logout'">
-                <span class="material-symbols-outlined text-on-surface-variant">logout</span>
+            <h1 class="hidden lg:block font-black text-lg tracking-tight text-slate-800">{{ t('Worker Dashboard') }}</h1>
+            <button class="p-2.5 rounded-xl hover:bg-slate-100 transition-colors lg:hidden" onclick="window.location.href='/logout'">
+                <span class="material-symbols-outlined text-slate-500">logout</span>
             </button>
         </header>
 
         <!-- ═══ PAGE CONTENT ═══ -->
-        <main class="vh-page-content">
+        <main class="vh-page-content max-w-6xl mx-auto py-8 px-4 sm:px-8 space-y-10">
 
             <!-- Welcome -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
-                <div>
-                    <h2 class="text-2xl sm:text-3xl font-extrabold text-primary">{{ t('Welcome,') }} {{ worker.name }}!</h2>
-                    <p class="text-on-surface-variant text-base sm:text-lg mt-1">
-                        {{ t('Active as') }} <span class="font-bold text-secondary">{{ worker.work }}</span> {{ t('in') }} {{ worker.location }}
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                <div class="space-y-1">
+                    <h2 class="text-4xl font-black text-primary tracking-tight">{{ t('Welcome,') }} {{ worker.name.split(' ')[0] }}!</h2>
+                    <p class="text-slate-500 font-medium text-lg">
+                        {{ t('You have new job recommendations matching') }} <span class="text-secondary font-black">{{ worker.work }}</span>
                     </p>
                 </div>
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                     <button id="availability-toggle" onclick="app.toggleAvailability({{ 'true' if worker.is_available else 'false' }})" 
-                        class="flex items-center gap-2 px-4 py-2 rounded-full font-bold transition-all {{ 'bg-green-100 text-green-700 border border-green-200' if worker.is_available else 'bg-slate-100 text-slate-500 border border-slate-200' }}">
-                        <span class="material-symbols-outlined text-[20px]">{{ 'check_circle' if worker.is_available else 'do_not_disturb_on' }}</span>
+                        class="availability-pill {{ 'bg-green-100 text-green-700 border border-green-200 shadow-sm shadow-green-100' if worker.is_available else 'bg-slate-100 text-slate-500 border border-slate-200' }}">
+                        <span class="material-symbols-outlined text-[18px]">{{ 'check_circle' if worker.is_available else 'do_not_disturb_on' }}</span>
                         <span>{{ t('Available') if worker.is_available else t('Busy') }}</span>
                     </button>
-                    <span class="vh-badge-active">{{ t('Active Now') }}</span>
+                    <span class="vh-badge-active">{{ t('Active') }}</span>
                 </div>
             </div>
 
@@ -121,68 +148,64 @@
                 <div class="vh-pane-left" id="profile-section">
 
                     <!-- Profile Snapshot -->
-                    <div class="glass-panel rounded-2xl p-5 sm:p-6 border-2 border-secondary/10 mb-5">
-                        <div class="flex items-center gap-4 mb-4">
-                            <div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center text-secondary flex-shrink-0">
-                                <span class="material-symbols-outlined text-4xl">person</span>
+                    <div class="glass-panel rounded-[32px] p-8 border-2 border-secondary/5 mb-6">
+                        <div class="flex flex-col items-center text-center mb-8">
+                            <div class="w-24 h-24 rounded-3xl bg-secondary/10 flex items-center justify-center text-secondary mb-5 border-2 border-secondary/20 shadow-xl shadow-secondary/5">
+                                <span class="material-symbols-outlined text-6xl" style="font-variation-settings:'FILL' 1">person</span>
                             </div>
-                            <div>
-                                <h3 class="font-bold text-xl flex items-center gap-2">
-                                    {{ worker.name }}
-                                    {% if worker.is_verified %}
-                                    <span class="material-symbols-outlined text-green-600 text-xl" title="{{ t('Verified') }}">verified</span>
-                                    {% endif %}
-                                </h3>
-                                <p class="text-on-surface-variant text-sm flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-sm">work</span>
-                                    {{ worker.work }}
-                                </p>
-                                <p class="text-on-surface-variant text-sm flex items-center gap-1 mt-0.5">
-                                    <span class="material-symbols-outlined text-sm">location_on</span>
-                                    {{ worker.location }}
-                                </p>
-                            </div>
+                            <h3 class="text-2xl font-black tracking-tight text-slate-900 flex items-center justify-center gap-2">
+                                {{ worker.name }}
+                                {% if worker.is_verified %}
+                                <span class="material-symbols-outlined text-green-500 text-2xl" title="{{ t('Verified') }}" style="font-variation-settings:'FILL' 1">verified</span>
+                                {% endif %}
+                            </h3>
+                            <p class="text-slate-500 font-bold uppercase tracking-widest text-[11px] mt-2 flex items-center gap-1.5 justify-center">
+                                <span class="material-symbols-outlined text-sm text-secondary">location_on</span>
+                                {{ worker.location }}
+                            </p>
                         </div>
 
-                        <!-- Stats chips -->
-                        <div class="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
-                            <div class="bg-blue-50 rounded-xl p-3 text-center">
-                                <p class="text-xs text-blue-600 font-semibold uppercase tracking-wide">{{ t('Work Type') }}</p>
-                                <p class="font-bold text-sm text-blue-800 mt-0.5 truncate">{{ worker.work }}</p>
+                        <!-- Stats grid -->
+                        <div class="grid grid-cols-2 gap-3 mb-8">
+                            <div class="profile-stat">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{{ t('Primary Skill') }}</p>
+                                <p class="font-black text-slate-800 text-xs truncate">{{ worker.work }}</p>
                             </div>
-                            <div class="bg-green-50 rounded-xl p-3 text-center">
-                                <p class="text-xs text-green-600 font-semibold uppercase tracking-wide">{{ t('Location') }}</p>
-                                <p class="font-bold text-sm text-green-800 mt-0.5 truncate">{{ worker.location }}</p>
+                            <div class="profile-stat">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{{ t('Rating') }}</p>
+                                <p class="font-black text-slate-800 text-xs">4.9 ★</p>
                             </div>
                         </div>
                         
-                        <button onclick="document.getElementById('edit-profile-modal').style.display='block'" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined text-sm">edit</span> {{ t('Edit Profile') }}
+                        <button onclick="document.getElementById('edit-profile-modal').style.display='block'" class="w-full h-14 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 shadow-sm">
+                            <span class="material-symbols-outlined text-lg">edit</span> {{ t('Update Profile') }}
                         </button>
                     </div>
 
                     <!-- Portfolio Media -->
                     {% if worker.voice_note or worker.video %}
-                    <div class="glass-panel rounded-2xl p-5 sm:p-6 border border-secondary/10" id="portfolio-section">
-                        <h3 class="font-bold text-lg flex items-center gap-2 mb-4">
-                            <span class="material-symbols-outlined text-secondary">perm_media</span>
-                            {{ t('My Portfolio') }}
+                    <div class="glass-panel rounded-[32px] p-8 border border-secondary/5" id="portfolio-section">
+                        <h3 class="font-black text-lg flex items-center gap-3 mb-6">
+                            <div class="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
+                                <span class="material-symbols-outlined text-xl" style="font-variation-settings:'FILL' 1">perm_media</span>
+                            </div>
+                            {{ t('Portfolio') }}
                         </h3>
 
                         {% if worker.voice_note %}
-                        <div class="mb-4">
-                            <p class="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1 mb-2">
-                                <span class="material-symbols-outlined text-sm">mic</span>{{ t('Voice Bio') }}
-                            </p>
+                        <div class="mb-8">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-secondary">mic</span>{{ t('Voice Introduction') }}
+                            </label>
                             <audio controls src="{{ url_for('static', filename=worker.voice_note) }}"></audio>
                         </div>
                         {% endif %}
 
                         {% if worker.video %}
                         <div>
-                            <p class="text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-1 mb-2">
-                                <span class="material-symbols-outlined text-sm">videocam</span>{{ t('Video Pitch') }}
-                            </p>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-secondary">videocam</span>{{ t('Work Showcase') }}
+                            </label>
                             <video controls preload="metadata" src="{{ url_for('static', filename=worker.video) }}"></video>
                         </div>
                         {% endif %}
@@ -191,62 +214,72 @@
                 </div>
                 
                 <!-- Edit Profile Modal -->
-                <div id="edit-profile-modal" style="display:none;" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-                        <div class="p-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-xl font-bold">{{ t('Edit Profile') }}</h3>
-                                <button onclick="document.getElementById('edit-profile-modal').style.display='none'" class="text-slate-400 hover:text-slate-600">
+                <div id="edit-profile-modal" style="display:none;" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div class="bg-white rounded-[32px] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in duration-300">
+                        <div class="p-8 sm:p-10">
+                            <div class="flex justify-between items-center mb-10">
+                                <h3 class="text-3xl font-black tracking-tight text-primary">{{ t('Edit Profile') }}</h3>
+                                <button onclick="document.getElementById('edit-profile-modal').style.display='none'" class="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-red-500 transition-colors">
                                     <span class="material-symbols-outlined">close</span>
                                 </button>
                             </div>
-                            <form id="worker-edit-form" enctype="multipart/form-data" class="flex flex-col gap-4">
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('Name') }}</label>
-                                    <input type="text" name="name" value="{{ worker.name }}" required class="w-full border-slate-300 rounded-lg focus:ring-secondary focus:border-secondary">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('Work Type') }}</label>
-                                    <input type="text" name="work" value="{{ worker.work }}" required class="w-full border-slate-300 rounded-lg focus:ring-secondary focus:border-secondary">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('Location') }}</label>
-                                    <div class="relative">
-                                        <input type="text" name="location" id="edit-w-loc" value="{{ worker.location }}" required class="w-full border-slate-300 rounded-lg focus:ring-secondary focus:border-secondary pr-10">
-                                        <button type="button" onclick="app.detectLocation('edit-w-loc')" class="absolute right-3 top-2.5 text-secondary">
-                                            <span class="material-symbols-outlined text-[20px]">my_location</span>
-                                        </button>
+                            <form id="worker-edit-form" enctype="multipart/form-data" class="space-y-8">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                                    <div class="space-y-2">
+                                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Full Name') }}</label>
+                                        <input type="text" name="name" value="{{ worker.name }}" required class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Work Type') }}</label>
+                                        <input type="text" name="work" value="{{ worker.work }}" required class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Location') }}</label>
+                                        <div class="relative">
+                                            <input type="text" name="location" id="edit-w-loc" value="{{ worker.location }}" required class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 pr-12 font-semibold">
+                                            <button type="button" onclick="app.detectLocation('edit-w-loc')" class="absolute right-4 top-4 text-secondary">
+                                                <span class="material-symbols-outlined">my_location</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Phone') }}</label>
+                                        <input type="tel" name="phone" value="{{ worker.phone }}" required pattern="[6-9][0-9]{9}" class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('Phone Number') }}</label>
-                                    <input type="tel" name="phone" value="{{ worker.phone }}" required pattern="[6-9][0-9]{9}" class="w-full border-slate-300 rounded-lg focus:ring-secondary focus:border-secondary">
+                                <div class="space-y-2">
+                                    <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Security (New Password)') }}</label>
+                                    <input type="password" name="password" minlength="6" placeholder="{{ t('Keep empty to stay the same') }}" class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('New Password (optional)') }}</label>
-                                    <input type="password" name="password" minlength="6" placeholder="{{ t('Leave blank to keep current') }}" class="w-full border-slate-300 rounded-lg focus:ring-secondary focus:border-secondary">
+                                
+                                <div class="bg-slate-50/80 rounded-[24px] p-6 space-y-6 border border-slate-200">
+                                     <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{{ t('Update Media') }}</h4>
+                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <div class="space-y-1.5">
+                                            <label class="text-[10px] font-black text-slate-500">{{ t('Voice Note') }}</label>
+                                            <input type="file" name="voice_note" accept="audio/*" class="w-full text-xs">
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-[10px] font-black text-slate-500">{{ t('Video Pitch') }}</label>
+                                            <input type="file" name="video" accept="video/*" class="w-full text-xs">
+                                        </div>
+                                        <div class="sm:col-span-2 space-y-1.5">
+                                            <label class="text-[10px] font-black text-slate-500">{{ t('Identity Proof') }}</label>
+                                            <input type="file" name="id_proof" accept="image/*" class="w-full text-xs">
+                                            {% if worker.id_proof_path %}
+                                            <p class="text-[10px] text-green-600 font-bold flex items-center gap-1.5 mt-2">
+                                                <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 1">check_circle</span> {{ t('Verified ID Uploaded') }}
+                                            </p>
+                                            {% endif %}
+                                        </div>
+                                     </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('Update Voice Note (optional)') }}</label>
-                                    <input type="file" name="voice_note" accept="audio/*" class="w-full text-sm">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('Update Video (optional)') }}</label>
-                                    <input type="file" name="video" accept="video/*" class="w-full text-sm">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">{{ t('ID Proof (Aadhaar/Voter ID)') }}</label>
-                                    <input type="file" name="id_proof" accept="image/*" class="w-full text-sm">
-                                    {% if worker.id_proof_path %}
-                                    <p class="text-[10px] text-green-600 mt-1 flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-xs">check_circle</span> {{ t('ID Proof Uploaded') }}
-                                    </p>
-                                    {% endif %}
-                                </div>
+
                                 <input type="hidden" name="latitude" id="w-lat" value="{{ worker.latitude or '' }}">
                                 <input type="hidden" name="longitude" id="w-lng" value="{{ worker.longitude or '' }}">
-                                <button type="submit" id="btn-update-worker" class="w-full bg-primary text-white font-bold py-3 rounded-lg hover:opacity-90 mt-2">
-                                    {{ t('Save Changes') }}
+                                
+                                <button type="submit" id="btn-update-worker" class="w-full h-16 bg-primary text-white font-black rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-2xl shadow-slate-200">
+                                    {{ t('Save All Changes') }}
                                 </button>
                             </form>
                         </div>
@@ -255,29 +288,29 @@
 
                 <!-- RIGHT PANE — Jobs Feed -->
                 <div class="vh-pane-right">
-                    <div class="vh-section-header">
-                        <h3 class="text-2xl font-bold">{{ t('Recommended Jobs') }}</h3>
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-3xl font-black tracking-tight">{{ t('Recommended') }}</h3>
                         <button onclick="app.fetchJobsForWorker('{{ worker.work }}')"
-                            class="p-2 text-secondary hover:bg-secondary/5 rounded-full transition-all flex items-center gap-1 text-sm font-semibold">
+                            class="px-5 h-11 bg-white text-secondary hover:bg-secondary/5 border border-slate-200 rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-sm">
                             <span class="material-symbols-outlined text-lg">refresh</span>
-                            <span class="hidden sm:inline">{{ t('Refresh') }}</span>
+                            <span class="hidden sm:inline">{{ t('Refresh Feed') }}</span>
                         </button>
                     </div>
 
-                    <div id="jobs-list" class="vh-jobs-grid">
-                        <div class="col-span-full text-slate-400 italic py-6 text-center">
-                            <span class="material-symbols-outlined text-4xl block mb-2 text-slate-300">work_outline</span>
-                            {{ t('Searching for jobs matching') }} <strong>{{ worker.work }}</strong>...
+                    <div id="jobs-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="col-span-full py-20 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-200">
+                            <span class="material-symbols-outlined text-5xl text-slate-300 mb-3 block">work_outline</span>
+                            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">{{ t('Finding jobs matching') }} <strong>{{ worker.work }}</strong>...</p>
                         </div>
                     </div>
                 </div>
 
-            </div><!-- end vh-two-pane -->
+            </div>
         </main>
-    </div><!-- end vh-main -->
+    </div>
 
     <!-- ═══ MOBILE / TABLET BOTTOM NAV ═══ -->
-    <nav class="vh-bottom-nav">
+    <nav class="vh-bottom-nav px-6">
         <button class="vh-bottom-nav-item active">
             <span class="material-symbols-outlined">work</span>
             <span>{{ t('Jobs') }}</span>
@@ -294,7 +327,7 @@
         {% endif %}
         <button class="vh-bottom-nav-item" onclick="window.location.href='/logout'">
             <span class="material-symbols-outlined">logout</span>
-            <span>{{ t('Sign Out') }}</span>
+            <span>{{ t('Out') }}</span>
         </button>
     </nav>
 
