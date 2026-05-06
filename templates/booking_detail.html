@@ -118,7 +118,9 @@
 </header>
 
 <!-- ── Main ── -->
-<main class="max-w-2xl mx-auto px-4 py-8 space-y-6">
+<main class="max-w-2xl mx-auto px-4 py-8 space-y-6" 
+      data-booking-id="{{ booking.id }}" 
+      data-is-customer="{{ 'true' if is_customer else 'false' }}">
 
     <!-- Booking ID + Status Badge -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -323,8 +325,9 @@
 </div>
 
 <script>
-    const BOOKING_ID    = "{{ booking.id }}";
-    const IS_CUSTOMER   = {{ 'true' if is_customer else 'false' }};
+    const bodyData = document.querySelector('main').dataset;
+    const BOOKING_ID    = bodyData.bookingId;
+    const IS_CUSTOMER   = bodyData.isCustomer === 'true';
     let   currentStatus = "{{ booking.status }}";
     let   html5QrCode   = null;
     let   pollTimer     = null;
