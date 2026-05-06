@@ -59,6 +59,28 @@ def is_valid_phone(phone):
 def safe_str(val):
     return str(val).strip() if val else ''
 
+def try_select(table, columns, filters=None, in_filters=None):
+    """Helper to try selecting with profile_pic, fallback if column missing."""
+    try:
+        query = supabase.table(table).select(columns)
+        if filters:
+            for k, v in filters.items(): query = query.eq(k, v)
+        if in_filters:
+            for k, v in in_filters.items(): query = query.in_(k, v)
+        return query.execute()
+    except Exception as e:
+        if 'profile_pic' in str(e).lower():
+            cols = columns.replace(', profile_pic', '').replace('profile_pic, ', '').replace('profile_pic', '')
+            query = supabase.table(table).select(cols)
+            if filters:
+                for k, v in filters.items(): query = query.eq(k, v)
+            if in_filters:
+                for k, v in in_filters.items(): query = query.in_(k, v)
+            resp = query.execute()
+            for row in resp.data: row['profile_pic'] = None
+            return resp
+        raise e
+
 # ---- TRANSLATION CONFIG ----
 @app.context_processor
 def inject_translation():
@@ -132,11 +154,11 @@ def user_dashboard():
     if 'user_id' not in session or session.get('role') != 'user':
         return redirect(url_for('login_page', role='user'))
     try:
-        response = supabase.table("users").select("*").eq("id", session['user_id']).execute()
-        if not response.data:
+        resp = try_select("users", "*", filters={"id": session['user_id']})
+        if not resp.data:
             session.clear()
             return redirect(url_for('login_page', role='user'))
-        user_data = response.data[0]
+        user_data = resp.data[0]
         return render_template('user_dashboard.html', user=user_data)
     except Exception as e:
         return f"Database error: {e}"
@@ -146,11 +168,11 @@ def worker_dashboard():
     if 'user_id' not in session or session.get('role') != 'worker':
         return redirect(url_for('login_page', role='worker'))
     try:
-        response = supabase.table("workers").select("*").eq("id", session['user_id']).execute()
-        if not response.data:
+        resp = try_select("workers", "*", filters={"id": session['user_id']})
+        if not resp.data:
             session.clear()
             return redirect(url_for('login_page', role='worker'))
-        worker_data = response.data[0]
+        worker_data = resp.data[0]
         return render_template('worker_dashboard.html', worker=worker_data)
     except Exception as e:
         return f"Database error: {e}"
@@ -225,12 +247,20 @@ def signup_user():
             profile_pic.save(os.path.join(PROFILE_PIC_FOLDER, filename))
             profile_pic_path = f'uploads/profile_pics/{filename}'
 
-        response = supabase.table("users").insert({
+        insert_data = {
             "name": name,
             "phone": phone,
             "password": hashed_pw,
             "profile_pic": profile_pic_path
-        }).execute()
+        }
+        
+        try:
+            response = supabase.table("users").insert(insert_data).execute()
+        except Exception as e:
+            if 'profile_pic' in str(e).lower():
+                insert_data.pop('profile_pic', None)
+                response = supabase.table("users").insert(insert_data).execute()
+            else: raise e
 
         user_id = response.data[0]['id']
         session['user_id'] = user_id
@@ -304,8 +334,7 @@ def signup_worker():
 
         lat = request.form.get('latitude')
         lng = request.form.get('longitude')
-
-        response = supabase.table("workers").insert({
+        insert_data = {
             "name": name,
             "work": work,
             "location": location,
@@ -319,17 +348,27 @@ def signup_worker():
             "longitude": float(lng) if lng else None,
             "is_available": True,
             "is_verified": False
-        }).execute()
+        }
+
+        try:
+            response = supabase.table("workers").insert(insert_data).execute()
+        except Exception as e:
+            if 'profile_pic' in str(e).lower():
+                insert_data.pop('profile_pic', None)
+                response = supabase.table("workers").insert(insert_data).execute()
+            else: raise e
 
         worker_id = response.data[0]['id']
         session['user_id'] = worker_id
         session['role'] = 'worker'
         session['name'] = name
+        session['phone'] = phone
 
         return jsonify({'message': 'Worker registered successfully', 'redirect': url_for('worker_dashboard')}), 201
     except Exception as e:
         print("Error during worker signup:\n", traceback.format_exc())
         return jsonify({'error': 'Server error'}), 500
+
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -460,7 +499,14 @@ def edit_worker_profile():
                 return jsonify({'error': 'Password must be at least 6 characters'}), 400
             update_data["password"] = generate_password_hash(password)
 
-        supabase.table("workers").update(update_data).eq("id", worker_id).execute()
+        try:
+            supabase.table("workers").update(update_data).eq("id", worker_id).execute()
+        except Exception as e:
+            if 'profile_pic' in str(e).lower():
+                update_data.pop('profile_pic', None)
+                supabase.table("workers").update(update_data).eq("id", worker_id).execute()
+            else:
+                raise e
         session['name'] = name
         return jsonify({'message': 'Profile updated successfully', 'redirect': url_for('worker_dashboard')}), 200
     except Exception as e:
@@ -617,9 +663,12 @@ def edit_user_profile():
     profile_pic = request.files.get('profile_pic')
     
     try:
-        existing_resp = supabase.table("users").select("profile_pic").eq("id", user_id).execute()
-        existing = existing_resp.data[0]
-        profile_pic_path = existing.get('profile_pic')
+        try:
+            existing_resp = try_select("users", "profile_pic", filters={"id": user_id})
+            existing = existing_resp.data[0]
+            profile_pic_path = existing.get('profile_pic')
+        except Exception:
+            profile_pic_path = None
 
         if profile_pic and profile_pic.filename != '':
             if not allowed_file(profile_pic.filename, ALLOWED_IMAGE_EXTENSIONS):
@@ -636,7 +685,13 @@ def edit_user_profile():
         if password:
             update_data["password"] = generate_password_hash(password)
 
-        supabase.table("users").update(update_data).eq("id", user_id).execute()
+        try:
+            supabase.table("users").update(update_data).eq("id", user_id).execute()
+        except Exception as e:
+            if 'profile_pic' in str(e).lower():
+                update_data.pop('profile_pic', None)
+                supabase.table("users").update(update_data).eq("id", user_id).execute()
+            else: raise e
         session['name'] = name
         return jsonify({'message': 'Profile updated successfully', 'redirect': url_for('user_dashboard')}), 200
     except Exception as e:
@@ -897,10 +952,10 @@ def booking_detail_page(booking_id):
         if booking['customer_id'] != uid and booking['worker_id'] != uid:
             return "Unauthorized", 403
 
-        w_resp = supabase.table("workers").select("name, phone, work, profile_pic").eq("id", booking['worker_id']).execute()
+        w_resp = try_select("workers", "name, phone, work, profile_pic", filters={"id": booking['worker_id']})
         worker = w_resp.data[0] if w_resp.data else {}
 
-        c_resp = supabase.table("users").select("name, phone, profile_pic").eq("id", booking['customer_id']).execute()
+        c_resp = try_select("users", "name, phone, profile_pic", filters={"id": booking['customer_id']})
         customer = c_resp.data[0] if c_resp.data else {}
 
         token = make_qr_token(booking_id)
@@ -1044,11 +1099,11 @@ def get_my_bookings():
         worker_ids = list({b['worker_id'] for b in bookings})
 
         # Fetch all customers in one query
-        customers_resp = supabase.table("users").select("id, name, profile_pic").in_("id", customer_ids).execute()
+        customers_resp = try_select("users", "id, name, profile_pic", in_filters={"id": customer_ids})
         customer_map = {c['id']: c for c in customers_resp.data}
 
         # Fetch all workers in one query
-        workers_resp = supabase.table("workers").select("id, name, profile_pic, work").in_("id", worker_ids).execute()
+        workers_resp = try_select("workers", "id, name, profile_pic, work", in_filters={"id": worker_ids})
         worker_map = {w['id']: w for w in workers_resp.data}
 
         # Enrich bookings
