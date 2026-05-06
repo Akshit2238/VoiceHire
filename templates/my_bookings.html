@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>My Bookings – VoiceHire</title>
+    <title>{{ t('My Bookings') }} – VoiceHire</title>
     <meta name="description" content="View all your bookings and track live job status on VoiceHire.">
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
@@ -75,23 +75,23 @@
             <span class="text-xl font-black tracking-tighter">VoiceHire</span>
         </div>
         <nav class="vh-sidebar-nav p-4 space-y-1">
-            <button class="vh-nav-item w-full" onclick="window.location.href='/dashboard/user'">
+            <button class="vh-nav-item w-full" onclick="window.location.href='/dashboard/{{ session.role }}'">
                 <span class="material-symbols-outlined">home</span>
-                <span>Dashboard</span>
+                <span>{{ t('Dashboard') }}</span>
             </button>
             <button class="vh-nav-item active w-full">
                 <span class="material-symbols-outlined">calendar_month</span>
-                <span>My Bookings</span>
+                <span>{{ t('My Bookings') }}</span>
             </button>
             <button class="vh-nav-item w-full" onclick="window.location.href='/dashboard/user#find-workers-section'">
                 <span class="material-symbols-outlined">person_search</span>
-                <span>Find Workers</span>
+                <span>{{ t('Find Workers') }}</span>
             </button>
         </nav>
         <div class="vh-sidebar-footer p-4 border-t border-slate-100">
             <button class="vh-nav-item w-full text-red-500 hover:bg-red-50 hover:text-red-600" onclick="window.location.href='/logout'">
                 <span class="material-symbols-outlined">logout</span>
-                <span>Sign Out</span>
+                <span>{{ t('Sign Out') }}</span>
             </button>
         </div>
     </aside>
@@ -103,7 +103,7 @@
                 <span class="material-symbols-outlined text-secondary text-2xl" style="font-variation-settings:'FILL' 1">settings_voice</span>
                 <span class="text-xl font-black tracking-tighter">VoiceHire</span>
             </div>
-            <h1 class="hidden lg:block font-black text-lg tracking-tight text-slate-800">My Bookings</h1>
+            <h1 class="hidden lg:block font-black text-lg tracking-tight text-slate-800">{{ t('My Bookings') }}</h1>
             <button class="p-2.5 rounded-xl hover:bg-slate-100 transition-colors lg:hidden" onclick="window.location.href='/logout'">
                 <span class="material-symbols-outlined text-slate-500">logout</span>
             </button>
@@ -114,22 +114,23 @@
             <!-- Page Title -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h2 class="text-3xl font-black tracking-tight">📅 My Bookings</h2>
-                    <p class="text-slate-500 font-medium mt-1">Track all your scheduled jobs in one place.</p>
+                    <h2 class="text-3xl font-black tracking-tight">📅 {{ t('My Bookings') }}</h2>
+                    <p class="text-slate-500 font-medium mt-1">{{ t('Track all your scheduled jobs in one place.') }}</p>
                 </div>
                 <a href="/dashboard/user" class="flex items-center gap-2 bg-secondary text-white font-black px-5 h-11 rounded-2xl hover:opacity-90 transition-opacity text-sm shadow-lg shadow-secondary/20 self-start sm:self-center">
                     <span class="material-symbols-outlined text-base">add</span>
-                    Book a Worker
+                    {{ t('Book a Worker') }}
                 </a>
             </div>
 
             <!-- Filter Tabs -->
             <div class="flex items-center gap-2 flex-wrap">
-                <button class="filter-tab active" onclick="setFilter('all', this)" id="tab-all">All</button>
-                <button class="filter-tab" onclick="setFilter('Booked', this)">🟡 Pending</button>
-                <button class="filter-tab" onclick="setFilter('Work Started', this)">🔵 Active</button>
-                <button class="filter-tab" onclick="setFilter('Completed', this)">🟢 Completed</button>
-                <button class="filter-tab" onclick="setFilter('Cancelled', this)">🔴 Cancelled</button>
+                <button class="filter-tab active" onclick="setFilter('all', this)" id="tab-all">{{ t('All') }}</button>
+                <button class="filter-tab" onclick="setFilter('Pending', this)">⏳ {{ t('Request') }}</button>
+                <button class="filter-tab" onclick="setFilter('Booked', this)">🟡 {{ t('Confirmed') }}</button>
+                <button class="filter-tab" onclick="setFilter('Work Started', this)">🔵 {{ t('Active') }}</button>
+                <button class="filter-tab" onclick="setFilter('Completed', this)">🟢 {{ t('Completed') }}</button>
+                <button class="filter-tab" onclick="setFilter('Cancelled', this)">🔴 {{ t('Cancelled') }}</button>
                 <button onclick="loadBookings()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:text-secondary border border-slate-200 transition-all ml-auto">
                     <span class="material-symbols-outlined text-xl">refresh</span>
                 </button>
@@ -139,19 +140,19 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="stats-row">
                 <div class="bg-white rounded-2xl p-4 border border-slate-100 text-center">
                     <p id="stat-total" class="text-2xl font-black text-slate-900">—</p>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Total</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{{ t('Total') }}</p>
                 </div>
                 <div class="bg-yellow-50 rounded-2xl p-4 border border-yellow-100 text-center">
                     <p id="stat-booked" class="text-2xl font-black text-yellow-700">—</p>
-                    <p class="text-[10px] font-black text-yellow-600 uppercase tracking-widest mt-1">Pending</p>
+                    <p class="text-[10px] font-black text-yellow-600 uppercase tracking-widest mt-1">{{ t('Pending') }}</p>
                 </div>
                 <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100 text-center">
                     <p id="stat-active" class="text-2xl font-black text-blue-700">—</p>
-                    <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">Active</p>
+                    <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">{{ t('Active') }}</p>
                 </div>
                 <div class="bg-green-50 rounded-2xl p-4 border border-green-100 text-center">
                     <p id="stat-done" class="text-2xl font-black text-green-700">—</p>
-                    <p class="text-[10px] font-black text-green-600 uppercase tracking-widest mt-1">Done</p>
+                    <p class="text-[10px] font-black text-green-600 uppercase tracking-widest mt-1">{{ t('Done') }}</p>
                 </div>
             </div>
 
@@ -159,7 +160,7 @@
             <div id="bookings-grid" class="space-y-4 pb-24">
                 <div class="flex items-center justify-center py-20 text-slate-400">
                     <span class="material-symbols-outlined spinner mr-2 text-3xl">autorenew</span>
-                    <span class="font-semibold">Loading bookings...</span>
+                    <span class="font-semibold">{{ t('Loading bookings...') }}</span>
                 </div>
             </div>
 
@@ -168,21 +169,21 @@
 
     <!-- Mobile Bottom Nav -->
     <nav class="vh-bottom-nav px-6">
-        <button class="vh-bottom-nav-item" onclick="window.location.href='/dashboard/user'">
+        <button class="vh-bottom-nav-item" onclick="window.location.href='/dashboard/{{ session.role }}'">
             <span class="material-symbols-outlined">home</span>
-            <span>Home</span>
+            <span>{{ t('Home') }}</span>
         </button>
         <button class="vh-bottom-nav-item active">
             <span class="material-symbols-outlined">calendar_month</span>
-            <span>Bookings</span>
+            <span>{{ t('Bookings') }}</span>
         </button>
         <button class="vh-bottom-nav-item" onclick="window.location.href='/dashboard/user'">
             <span class="material-symbols-outlined">person_search</span>
-            <span>Explore</span>
+            <span>{{ t('Explore') }}</span>
         </button>
         <button class="vh-bottom-nav-item" onclick="window.location.href='/logout'">
             <span class="material-symbols-outlined">logout</span>
-            <span>Out</span>
+            <span>{{ t('Out') }}</span>
         </button>
     </nav>
 
@@ -191,10 +192,11 @@
     let activeFilter = 'all';
 
     const STATUS_CONFIG = {
-        'Booked':       { cls: 's-booked',       icon: 'pending',    label: 'Pending',      steps: [1,0,0] },
-        'Work Started': { cls: 's-work-started',  icon: 'handyman',   label: 'In Progress',  steps: [1,1,0] },
-        'Completed':    { cls: 's-completed',     icon: 'task_alt',   label: 'Completed',    steps: [1,1,1] },
-        'Cancelled':    { cls: 's-cancelled',     icon: 'cancel',     label: 'Cancelled',    steps: [0,0,0] },
+        'Pending':      { cls: 's-booked',       icon: 'hourglass_empty', label: '{{ t("Request") }}',   steps: [1,0,0] },
+        'Booked':       { cls: 's-booked',       icon: 'pending',    label: '{{ t("Confirmed") }}', steps: [1,0,0] },
+        'Work Started': { cls: 's-work-started',  icon: 'handyman',   label: '{{ t("Active") }}',  steps: [1,1,0] },
+        'Completed':    { cls: 's-completed',     icon: 'task_alt',   label: '{{ t("Done") }}',    steps: [1,1,1] },
+        'Cancelled':    { cls: 's-cancelled',     icon: 'cancel',     label: '{{ t("Cancelled") }}',    steps: [0,0,0] },
     };
 
     function setFilter(filter, btn) {

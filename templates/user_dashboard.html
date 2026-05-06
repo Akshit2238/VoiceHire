@@ -41,10 +41,10 @@
         }
 
         .glass-panel {
-            background: rgba(255, 255, 255, 0.75);
+            background: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
-            border: 1.5px solid rgba(226, 232, 240, 0.6);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
         }
 
         .worker-card {
@@ -149,6 +149,10 @@
                 onclick="document.getElementById('post-job-section').scrollIntoView({behavior:'smooth'})">
                 <span class="material-symbols-outlined">add_task</span>
                 <span>{{ t('Post a Job') }}</span>
+            </button>
+            <button class="vh-nav-item w-full" onclick="window.location.href='/bookings'">
+                <span class="material-symbols-outlined">calendar_month</span>
+                <span>{{ t('My Bookings') }}</span>
             </button>
         </nav>
         <div class="vh-sidebar-footer p-4 border-t border-slate-100">
@@ -304,8 +308,19 @@
                 </form>
             </section>
 
+            <!-- Upcoming Bookings -->
+            <section id="dashboard-bookings-section" class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xl font-black tracking-tight text-primary">{{ t('Upcoming Bookings') }}</h3>
+                    <a href="/bookings" class="text-xs font-black text-secondary uppercase tracking-widest hover:underline">{{ t('View All') }}</a>
+                </div>
+                <div id="dashboard-bookings-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="col-span-full py-8 text-center text-slate-400 italic text-sm">{{ t('Loading bookings...') }}</div>
+                </div>
+            </section>
+
             <!-- My Jobs List -->
-            <section id="my-jobs-section" class="space-y-6">
+            <section id="my-jobs-section" class="space-y-6 pt-6">
                 <div class="flex items-center justify-between">
                     <h3 class="text-2xl font-black tracking-tight">{{ t('Active Requests') }}</h3>
                     <button onclick="app.fetchCustomerJobs()"
@@ -412,6 +427,10 @@
             onclick="document.getElementById('post-job-section').scrollIntoView({behavior:'smooth'})">
             <span class="material-symbols-outlined">add_task</span>
             <span>{{ t('Post') }}</span>
+        </button>
+        <button class="vh-bottom-nav-item" onclick="window.location.href='/bookings'">
+            <span class="material-symbols-outlined">calendar_month</span>
+            <span>{{ t('Bookings') }}</span>
         </button>
         <button class="vh-bottom-nav-item" onclick="window.location.href='/logout'">
             <span class="material-symbols-outlined">logout</span>
@@ -526,6 +545,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             app.fetchWorkers();
             app.fetchCustomerJobs();
+            app.fetchDashboardBookings();
             setTimeout(() => {
                 const cards = document.querySelectorAll('#workers-list .worker-card, #workers-list > div:not(.col-span-full)');
                 if (cards.length) document.getElementById('stat-workers-count').textContent = cards.length + '+';

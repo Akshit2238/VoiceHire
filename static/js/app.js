@@ -725,6 +725,102 @@ const app = {
         this.fetchCustomerJobs();
     },
 
+    async fetchDashboardBookings() {
+        const container = document.getElementById('dashboard-bookings-list');
+        if (!container) return;
+
+        try {
+            const res = await fetch('/api/bookings');
+            const bookings = await res.json();
+            const upcoming = bookings.filter(b => ['Pending', 'Booked', 'Work Started'].includes(b.status));
+
+            if (upcoming.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 italic text-sm">No upcoming bookings.</div>`;
+                return;
+            }
+
+            const isWorker = window.location.pathname.includes('worker');
+            container.innerHTML = upcoming.slice(0, 4).map(b => `
+                <a href="/bookings/${b.id}" class="glass-panel p-4 rounded-2xl border border-slate-100 flex items-center justify-between hover:border-secondary/30 transition-all">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                            <span class="material-symbols-outlined text-xl">calendar_month</span>
+                        </div>
+                        <div>
+                            <p class="font-black text-slate-800 text-sm">${isWorker ? b.customer_name : b.worker_name}</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">${b.date} • ${b.time_slot}</p>
+                        </div>
+                    </div>
+                    <span class="px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${b.status === 'Work Started' ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-600'}">
+                        ${b.status}
+                    </span>
+                </a>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    async fetchWorkerPendingBookings() {
+        const container = document.getElementById('pending-bookings-list');
+        if (!container) return;
+
+        try {
+            const res = await fetch('/api/bookings');
+            const bookings = await res.json();
+            const pending = bookings.filter(b => b.status === 'Pending');
+
+            if (pending.length === 0) {
+                container.parentElement.style.display = 'none';
+                return;
+            }
+
+            container.parentElement.style.display = 'block';
+            container.innerHTML = pending.map(b => `
+                <div class="glass-panel p-6 rounded-[24px] border border-amber-100/50 hover:shadow-xl hover:shadow-amber-500/5 transition-all space-y-4 bg-white">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-sm">
+                            <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">person</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-black text-slate-900 truncate">${b.customer_name}</p>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${b.date} • ${b.time_slot}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="app.acceptBookingDirectly(${b.id})" 
+                            class="flex-1 h-11 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-600/20 hover:bg-amber-700 transition-all active:scale-95">
+                            Accept Now
+                        </button>
+                        <button onclick="location.href='/bookings/${b.id}'" 
+                            class="flex-1 h-11 bg-slate-50 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all border border-slate-100">
+                            Details
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    },
+
+    async acceptBookingDirectly(bookingId) {
+        if (!confirm("Accept this booking request?")) return;
+        try {
+            const res = await fetch(`/api/bookings/${bookingId}/accept`, { method: 'POST' });
+            if (res.ok) {
+                alert("Booking accepted!");
+                this.fetchWorkerPendingBookings();
+            } else {
+                const data = await res.json();
+                alert(data.error || "Failed to accept");
+            }
+        } catch (e) {
+            alert("Connection error");
+        }
+    },
+
     setServiceFilter(val) {
         const input = document.getElementById('u-service');
         if (input) {
@@ -998,6 +1094,12 @@ const app = {
                 headerDiv.appendChild(infoWrapper);
                 headerDiv.appendChild(actionsWrapper);
                 card.appendChild(headerDiv);
+
+                const bookBtn = document.createElement('a');
+                bookBtn.href = `/book/${w.id}`;
+                bookBtn.className = 'mt-2 h-12 bg-secondary text-white rounded-xl flex items-center justify-center gap-2 font-black text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-secondary/10';
+                bookBtn.innerHTML = `<span class="material-symbols-outlined text-base">calendar_month</span> Book Now`;
+                card.appendChild(bookBtn);
 
                 if (w.voice_resume) {
                     const vrDiv = document.createElement('div');

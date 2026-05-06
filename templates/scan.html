@@ -56,7 +56,36 @@
     const scanner = new Html5Qrcode("reader");
     const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-    function onScanSuccess(decodedText) {
+    async function onScanSuccess(decodedText) {
+      try {
+        const payload = JSON.parse(decodedText);
+        if (payload.bid && payload.tok) {
+          // It's a booking QR!
+          await scanner.stop();
+          document.getElementById('scan-status').textContent = "{{ t('Booking detected! Verifying...') }}";
+          
+          const res = await fetch(`/api/bookings/${payload.bid}/checkin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: payload.tok })
+          });
+          const data = await res.json();
+          
+          if (res.ok) {
+            document.getElementById('scan-status').className = "text-green-400 font-bold mb-8";
+            document.getElementById('scan-status').textContent = "✓ " + data.message;
+            setTimeout(() => window.location.href = '/dashboard/worker', 2000);
+          } else {
+            document.getElementById('scan-status').className = "text-red-400 font-bold mb-8";
+            document.getElementById('scan-status').textContent = "⚠ " + (data.error || 'Verification failed');
+            setTimeout(() => scanner.start({ facingMode: "environment" }, config, onScanSuccess), 3000);
+          }
+          return;
+        }
+      } catch (e) {
+        // Not JSON, continue to old URL check
+      }
+
       scanner.stop().then(() => {
         document.getElementById('scan-status').textContent = "{{ t('QR detected! Opening...') }}";
         if (decodedText.includes('/complete-job/')) {

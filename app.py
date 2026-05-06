@@ -482,9 +482,8 @@ def get_workers():
     location_filter = safe_str(request.args.get('location'))
 
     try:
-        query = supabase.table("workers").select(
-            "id, name, work, location, phone, voice_note, video, is_verified, is_available, latitude, longitude, voice_resume"
-        )
+        query = supabase.table("workers").select("*")
+
         if work_filter and work_filter.lower() != 'all':
             query = query.ilike("work", f"%{work_filter}%")
         if location_filter:
@@ -494,10 +493,13 @@ def get_workers():
         workers = workers_resp.data
 
         # Fetch all reviews to compute aggregates
-        reviews_resp = supabase.table("reviews").select("worker_id, rating").execute()
-        review_map = defaultdict(list)
-        for r in reviews_resp.data:
-            review_map[r['worker_id']].append(r['rating'])
+        try:
+            reviews_resp = supabase.table("reviews").select("worker_id, rating").execute()
+            review_map = defaultdict(list)
+            for r in reviews_resp.data:
+                review_map[r['worker_id']].append(r['rating'])
+        except Exception:
+            review_map = {}
 
         for w in workers:
             ratings = review_map.get(w['id'], [])
@@ -583,7 +585,8 @@ def get_customer_jobs():
 
     user_id = session['user_id']
     try:
-        jobs_resp = supabase.table("jobs").select("*, completion_token, token_expires_at").eq("user_id", user_id).order("created_at", desc=True).execute()
+        jobs_resp = supabase.table("jobs").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+
         jobs = jobs_resp.data
 
         # For jobs with a worker_id, fetch worker details
@@ -815,7 +818,7 @@ def booking_detail_page(booking_id):
             customer=customer,
             qr_b64=qr_b64,
             role=role,
-            is_customer=(uid == booking['customer_id'])
+            is_customer=(role == 'user' and uid == booking['customer_id'])
         )
     except Exception as e:
         print(traceback.format_exc())
@@ -933,7 +936,7 @@ def get_my_bookings():
     role = session.get('role')
     try:
         if role == 'user':
-            resp = supabase.table("bookings").select("*").eq("customer_id", uid).order("created_at", desc=True).execute()
+            resp = supabase.table("bookings").select("*").eq("customer_id", uid).order("date", desc=False).execute()
         else:
             resp = supabase.table("bookings").select("*").eq("worker_id", uid).order("date", desc=False).execute()
 
@@ -956,11 +959,11 @@ def get_my_bookings():
 
         return jsonify(bookings), 200
     except Exception as e:
-        print(traceback.format_exc())
-        return jsonify({'error': 'Server error'}), 500
+        print(f"Error fetching bookings: {e}")
+        return jsonify([]), 200
 
 
-@app.route('/api/bookings/<booking_id>', methods=['GET'])
+@app.route('/api/bookings/<int:booking_id>', methods=['GET'])
 def get_booking(booking_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
@@ -978,7 +981,7 @@ def get_booking(booking_id):
         return jsonify({'error': 'Server error'}), 500
 
 
-@app.route('/api/bookings/<booking_id>/checkin', methods=['POST'])
+@app.route('/api/bookings/<int:booking_id>/checkin', methods=['POST'])
 def checkin_booking(booking_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
@@ -997,7 +1000,7 @@ def checkin_booking(booking_id):
             return jsonify({'error': 'Unauthorized'}), 403
         if booking['status'] != 'Booked':
             return jsonify({'error': f"Cannot check in. Current status: {booking['status']}"}), 400
-        if token != booking['qr_token']:
+        if not verify_qr_token(booking_id, token):
             return jsonify({'error': 'Invalid or expired QR code'}), 403
 
         supabase.table("bookings").update({"status": "Work Started"}).eq("id", booking_id).execute()
@@ -1007,7 +1010,7 @@ def checkin_booking(booking_id):
         return jsonify({'error': 'Server error'}), 500
 
 
-@app.route('/api/bookings/<booking_id>/complete', methods=['POST'])
+@app.route('/api/bookings/<int:booking_id>/complete', methods=['POST'])
 def complete_booking(booking_id):
     if 'user_id' not in session or session.get('role') != 'user':
         return jsonify({'error': 'Unauthorized'}), 401
@@ -1028,7 +1031,7 @@ def complete_booking(booking_id):
         return jsonify({'error': 'Server error'}), 500
 
 
-@app.route('/api/bookings/<booking_id>/cancel', methods=['POST'])
+@app.route('/api/bookings/<int:booking_id>/cancel', methods=['POST'])
 def cancel_booking(booking_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
@@ -1049,7 +1052,7 @@ def cancel_booking(booking_id):
         return jsonify({'error': 'Server error'}), 500
 
 
-@app.route('/api/bookings/<booking_id>/accept', methods=['POST'])
+@app.route('/api/bookings/<int:booking_id>/accept', methods=['POST'])
 def accept_booking(booking_id):
     if 'user_id' not in session or session.get('role') != 'worker':
         return jsonify({'error': 'Unauthorized'}), 401
@@ -1070,7 +1073,7 @@ def accept_booking(booking_id):
         return jsonify({'error': 'Server error'}), 500
 
 
-@app.route('/api/bookings/<booking_id>/decline', methods=['POST'])
+@app.route('/api/bookings/<int:booking_id>/decline', methods=['POST'])
 def decline_booking(booking_id):
     if 'user_id' not in session or session.get('role') != 'worker':
         return jsonify({'error': 'Unauthorized'}), 401
