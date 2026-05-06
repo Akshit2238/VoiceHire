@@ -833,6 +833,9 @@ const app = {
                             <a href="https://wa.me/91${w.phone}" target="_blank" class="bg-green-500 text-white p-1 rounded-full flex items-center justify-center w-8 h-8">
                                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" class="w-4 h-4 filter brightness-0 invert">
                             </a>
+                            <a href="/book/${w.id}" class="bg-[#00668a] text-white p-1 rounded-full flex items-center justify-center w-8 h-8" title="Book Now">
+                                <span class="material-symbols-outlined text-sm">calendar_month</span>
+                            </a>
                         </div>
                     </div>
                 `);
@@ -992,6 +995,16 @@ const app = {
                 headerDiv.appendChild(infoWrapper);
                 headerDiv.appendChild(actionsWrapper);
                 card.appendChild(headerDiv);
+
+                // ── Book Now button ──────────────────────────────────
+                const bookFooter = document.createElement('div');
+                bookFooter.className = 'pt-4 border-t border-slate-100';
+                const bookBtn = document.createElement('a');
+                bookBtn.href = `/book/${w.id}`;
+                bookBtn.className = 'flex items-center justify-center gap-2 w-full h-11 bg-[#00668a] text-white rounded-2xl font-black text-sm hover:opacity-90 active:scale-95 transition-all shadow-md shadow-[#00668a]/20';
+                bookBtn.innerHTML = `<span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL' 1">calendar_month</span> Book Now`;
+                bookFooter.appendChild(bookBtn);
+                card.appendChild(bookFooter);
 
                 if (w.voice_note || w.video) {
                     const mediaDiv = document.createElement('div');

@@ -93,6 +93,10 @@
                 <span class="material-symbols-outlined">home</span>
                 <span>{{ t('Home') }}</span>
             </button>
+            <button class="vh-nav-item w-full" onclick="window.location.href='/bookings'">
+                <span class="material-symbols-outlined">calendar_month</span>
+                <span>{{ t('My Bookings') }}</span>
+            </button>
             <button class="vh-nav-item w-full" onclick="document.getElementById('find-workers-section').scrollIntoView({behavior:'smooth'})">
                 <span class="material-symbols-outlined">person_search</span>
                 <span>{{ t('Find Workers') }}</span>
@@ -312,6 +316,10 @@
         <button class="vh-bottom-nav-item active">
             <span class="material-symbols-outlined">home</span>
             <span>{{ t('Home') }}</span>
+        </button>
+        <button class="vh-bottom-nav-item" onclick="window.location.href='/bookings'">
+            <span class="material-symbols-outlined">calendar_month</span>
+            <span>{{ t('Bookings') }}</span>
         </button>
         <button class="vh-bottom-nav-item" onclick="document.getElementById('find-workers-section').scrollIntoView({behavior:'smooth'})">
             <span class="material-symbols-outlined">person_search</span>
