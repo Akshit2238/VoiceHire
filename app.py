@@ -3,7 +3,12 @@ import os
 import uuid
 import re
 import secrets
-from datetime import datetime, timedelta
+import hmac
+import hashlib
+import json
+import base64
+import io
+from datetime import datetime, timedelta, date
 from collections import defaultdict
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -12,6 +17,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from translations import get_translation
+import qrcode
 
 load_dotenv()
 
@@ -725,6 +731,364 @@ def translate_api():
         translated = get_translation(lang, text)
 
     return jsonify({'translated': translated})
+
+
+# ════════════════════════════════════════════════════════════
+#  BOOKING & QR VERIFICATION SYSTEM (from partner's codebase)
+# ════════════════════════════════════════════════════════════
+
+TIME_SLOTS = [
+    "09:00-11:00",
+    "11:00-13:00",
+    "13:00-15:00",
+    "15:00-17:00",
+    "17:00-19:00",
+]
+
+def make_qr_token(booking_id) -> str:
+    """Generate a tamper-proof HMAC-SHA256 token for a booking."""
+    secret = app.secret_key.encode('utf-8')
+    msg = str(booking_id).encode('utf-8')
+    return hmac.new(secret, msg, hashlib.sha256).hexdigest()
+
+def verify_qr_token(booking_id, token: str) -> bool:
+    """Constant-time comparison to prevent timing attacks."""
+    expected = make_qr_token(booking_id)
+    return hmac.compare_digest(expected, token)
+
+def generate_qr_base64(data: dict) -> str:
+    """Render a QR code as a base64-encoded PNG string."""
+    payload = json.dumps(data, separators=(',', ':'))
+    qr = qrcode.QRCode(
+        version=2,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(payload)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="#000000", back_color="#ffffff")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return base64.b64encode(buf.read()).decode('utf-8')
+
+
+# ── Booking Page Routes ──────────────────────────────────────────────
+
+@app.route('/bookings')
+def my_bookings_page():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page', role='user'))
+    return render_template('my_bookings.html', name=session.get('name'))
+
+
+@app.route('/bookings/<int:booking_id>')
+def booking_detail_page(booking_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login_page', role='user'))
+    try:
+        resp = supabase.table("bookings").select("*").eq("id", booking_id).execute()
+        if not resp.data:
+            return "Booking not found", 404
+        booking = resp.data[0]
+
+        uid = session['user_id']
+        role = session.get('role')
+        if booking['customer_id'] != uid and booking['worker_id'] != uid:
+            return "Unauthorized", 403
+
+        w_resp = supabase.table("workers").select("name, phone, work").eq("id", booking['worker_id']).execute()
+        worker = w_resp.data[0] if w_resp.data else {}
+
+        c_resp = supabase.table("users").select("name, phone").eq("id", booking['customer_id']).execute()
+        customer = c_resp.data[0] if c_resp.data else {}
+
+        token = make_qr_token(booking_id)
+        qr_data = {"bid": booking_id, "tok": token}
+        qr_b64 = generate_qr_base64(qr_data)
+
+        return render_template(
+            'booking_detail.html',
+            booking=booking,
+            worker=worker,
+            customer=customer,
+            qr_b64=qr_b64,
+            role=role,
+            is_customer=(uid == booking['customer_id'])
+        )
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"Error: {e}", 500
+
+
+@app.route('/book/<int:worker_id>')
+def book_worker_page(worker_id):
+    if 'user_id' not in session or session.get('role') != 'user':
+        return redirect(url_for('login_page', role='user'))
+    try:
+        resp = supabase.table("workers").select("id, name, work, location, is_available").eq("id", worker_id).execute()
+        if not resp.data:
+            return "Worker not found", 404
+        worker = resp.data[0]
+        return render_template('booking_slots.html', worker=worker, slots=TIME_SLOTS)
+    except Exception as e:
+        return f"Error: {e}", 500
+
+
+# ── Booking API Routes ───────────────────────────────────────────────
+
+@app.route('/api/bookings/slots', methods=['GET'])
+def get_available_slots():
+    worker_id = request.args.get('worker_id', '').strip()
+    date_str  = request.args.get('date', '').strip()
+    if not worker_id or not date_str:
+        return jsonify({'error': 'worker_id and date are required'}), 400
+    try:
+        datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'date must be YYYY-MM-DD'}), 400
+    try:
+        resp = supabase.table("bookings") \
+            .select("time_slot") \
+            .eq("worker_id", worker_id) \
+            .eq("date", date_str) \
+            .neq("status", "Cancelled") \
+            .execute()
+        booked_slots = {row['time_slot'] for row in resp.data}
+        result = [{"slot": s, "available": s not in booked_slots} for s in TIME_SLOTS]
+        return jsonify(result), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/bookings', methods=['POST'])
+def create_booking():
+    if 'user_id' not in session or session.get('role') != 'user':
+        return jsonify({'error': 'Unauthorized'}), 401
+    try:
+        data = request.get_json() or {}
+    except Exception:
+        return jsonify({'error': 'Invalid JSON'}), 400
+
+    worker_id = safe_str(data.get('worker_id'))
+    date_str  = safe_str(data.get('date'))
+    time_slot = safe_str(data.get('time_slot'))
+    notes     = safe_str(data.get('notes', ''))
+
+    if not worker_id or not date_str or not time_slot:
+        return jsonify({'error': 'worker_id, date, and time_slot are required'}), 400
+    if time_slot not in TIME_SLOTS:
+        return jsonify({'error': 'Invalid time slot'}), 400
+    try:
+        datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'date must be YYYY-MM-DD'}), 400
+
+    customer_id = session['user_id']
+    try:
+        w_resp = supabase.table("workers").select("id, name").eq("id", worker_id).execute()
+        if not w_resp.data:
+            return jsonify({'error': 'Worker not found'}), 404
+
+        conflict = supabase.table("bookings") \
+            .select("id") \
+            .eq("worker_id", worker_id) \
+            .eq("date", date_str) \
+            .eq("time_slot", time_slot) \
+            .neq("status", "Cancelled") \
+            .execute()
+        if conflict.data:
+            return jsonify({'error': 'This slot is already booked. Please choose another.'}), 409
+
+        qr_token = uuid.uuid4().hex
+        insert_resp = supabase.table("bookings").insert({
+            "customer_id": customer_id,
+            "worker_id":   worker_id,
+            "date":        date_str,
+            "time_slot":   time_slot,
+            "notes":       notes,
+            "status":      "Pending",
+            "qr_token":    qr_token,
+        }).execute()
+
+        booking = insert_resp.data[0]
+        new_id  = booking['id']
+        return jsonify({
+            'message':    'Booking confirmed!',
+            'booking_id': new_id,
+            'redirect':   url_for('booking_detail_page', booking_id=new_id)
+        }), 201
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/bookings', methods=['GET'])
+def get_my_bookings():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    uid  = session['user_id']
+    role = session.get('role')
+    try:
+        if role == 'user':
+            resp = supabase.table("bookings").select("*").eq("customer_id", uid).order("created_at", desc=True).execute()
+        else:
+            resp = supabase.table("bookings").select("*").eq("worker_id", uid).order("date", desc=False).execute()
+
+        bookings = resp.data
+        worker_ids   = list({b['worker_id']   for b in bookings})
+        customer_ids = list({b['customer_id'] for b in bookings})
+        worker_map, customer_map = {}, {}
+
+        if worker_ids:
+            wr = supabase.table("workers").select("id, name, work").in_("id", worker_ids).execute()
+            worker_map = {w['id']: w for w in wr.data}
+        if customer_ids:
+            cr = supabase.table("users").select("id, name").in_("id", customer_ids).execute()
+            customer_map = {c['id']: c for c in cr.data}
+
+        for b in bookings:
+            b['worker_name']   = worker_map.get(b['worker_id'],   {}).get('name', '—')
+            b['worker_work']   = worker_map.get(b['worker_id'],   {}).get('work', '')
+            b['customer_name'] = customer_map.get(b['customer_id'], {}).get('name', '—')
+
+        return jsonify(bookings), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/bookings/<booking_id>', methods=['GET'])
+def get_booking(booking_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    uid = session['user_id']
+    try:
+        resp = supabase.table("bookings").select("*").eq("id", booking_id).execute()
+        if not resp.data:
+            return jsonify({'error': 'Not found'}), 404
+        b = resp.data[0]
+        if b['customer_id'] != uid and b['worker_id'] != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+        return jsonify(b), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/bookings/<booking_id>/checkin', methods=['POST'])
+def checkin_booking(booking_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    try:
+        data  = request.get_json() or {}
+        token = safe_str(data.get('token', ''))
+        if not token:
+            return jsonify({'error': 'QR token is required'}), 400
+
+        resp = supabase.table("bookings").select("*").eq("id", booking_id).execute()
+        if not resp.data:
+            return jsonify({'error': 'Booking not found'}), 404
+        booking = resp.data[0]
+        uid = session['user_id']
+        if booking['customer_id'] != uid and booking['worker_id'] != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+        if booking['status'] != 'Booked':
+            return jsonify({'error': f"Cannot check in. Current status: {booking['status']}"}), 400
+        if token != booking['qr_token']:
+            return jsonify({'error': 'Invalid or expired QR code'}), 403
+
+        supabase.table("bookings").update({"status": "Work Started"}).eq("id", booking_id).execute()
+        return jsonify({'message': 'Check-in successful! Work has started.', 'status': 'Work Started'}), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/bookings/<booking_id>/complete', methods=['POST'])
+def complete_booking(booking_id):
+    if 'user_id' not in session or session.get('role') != 'user':
+        return jsonify({'error': 'Unauthorized'}), 401
+    uid = session['user_id']
+    try:
+        resp = supabase.table("bookings").select("*").eq("id", booking_id).execute()
+        if not resp.data:
+            return jsonify({'error': 'Booking not found'}), 404
+        booking = resp.data[0]
+        if booking['customer_id'] != uid:
+            return jsonify({'error': 'Only the customer can mark work as complete'}), 403
+        if booking['status'] != 'Work Started':
+            return jsonify({'error': f"Work must be started before completing. Current: {booking['status']}"}), 400
+        supabase.table("bookings").update({"status": "Completed"}).eq("id", booking_id).execute()
+        return jsonify({'message': 'Work marked as completed!', 'status': 'Completed'}), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/bookings/<booking_id>/cancel', methods=['POST'])
+def cancel_booking(booking_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    uid = session['user_id']
+    try:
+        resp = supabase.table("bookings").select("*").eq("id", booking_id).execute()
+        if not resp.data:
+            return jsonify({'error': 'Booking not found'}), 404
+        booking = resp.data[0]
+        if booking['customer_id'] != uid and booking['worker_id'] != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+        if booking['status'] in ('Completed', 'Cancelled'):
+            return jsonify({'error': 'Cannot cancel'}), 400
+        supabase.table("bookings").update({"status": "Cancelled"}).eq("id", booking_id).execute()
+        return jsonify({'message': 'Booking cancelled.', 'status': 'Cancelled'}), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/bookings/<booking_id>/accept', methods=['POST'])
+def accept_booking(booking_id):
+    if 'user_id' not in session or session.get('role') != 'worker':
+        return jsonify({'error': 'Unauthorized'}), 401
+    uid = session['user_id']
+    try:
+        resp = supabase.table("bookings").select("*").eq("id", booking_id).execute()
+        if not resp.data:
+            return jsonify({'error': 'Booking not found'}), 404
+        booking = resp.data[0]
+        if booking['worker_id'] != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+        if booking['status'] != 'Pending':
+            return jsonify({'error': f"Cannot accept. Current status: {booking['status']}"}), 400
+        supabase.table("bookings").update({"status": "Booked"}).eq("id", booking_id).execute()
+        return jsonify({'message': 'Booking accepted!', 'status': 'Booked'}), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/bookings/<booking_id>/decline', methods=['POST'])
+def decline_booking(booking_id):
+    if 'user_id' not in session or session.get('role') != 'worker':
+        return jsonify({'error': 'Unauthorized'}), 401
+    uid = session['user_id']
+    try:
+        resp = supabase.table("bookings").select("*").eq("id", booking_id).execute()
+        if not resp.data:
+            return jsonify({'error': 'Booking not found'}), 404
+        booking = resp.data[0]
+        if booking['worker_id'] != uid:
+            return jsonify({'error': 'Unauthorized'}), 403
+        if booking['status'] != 'Pending':
+            return jsonify({'error': 'Cannot decline a booking that is not pending'}), 400
+        supabase.table("bookings").update({"status": "Cancelled"}).eq("id", booking_id).execute()
+        return jsonify({'message': 'Booking declined.', 'status': 'Cancelled'}), 200
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
 
 if __name__ == '__main__':
     print("Starting VoiceHire Server...")
