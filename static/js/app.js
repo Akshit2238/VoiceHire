@@ -532,6 +532,8 @@ const app = {
                 const bottomDiv = document.createElement('div');
                 bottomDiv.className = 'flex items-center justify-between mt-2 pt-4 border-t border-slate-100';
 
+                const userDiv = document.createElement('div');
+                userDiv.className = 'flex items-center gap-2';
                 userDiv.innerHTML = `
                     <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 overflow-hidden">
                         ${j.user_profile_pic ? `<img src="/static/${j.user_profile_pic}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-sm">person</span>`}

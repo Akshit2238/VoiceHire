@@ -1013,24 +1013,38 @@ def create_booking():
 def get_my_bookings():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    uid  = session['user_id']
+    uid = session['user_id']
     try:
         # Get all bookings where user is either customer or worker
         resp = supabase.table("bookings").select("*").or_(f"customer_id.eq.{uid},worker_id.eq.{uid}").order("date", desc=False).execute()
         bookings = resp.data
-        
-        # Enrich with names and profile pics
+
+        if not bookings:
+            return jsonify([]), 200
+
+        # Collect all unique IDs to fetch in bulk
+        customer_ids = list({b['customer_id'] for b in bookings})
+        worker_ids = list({b['worker_id'] for b in bookings})
+
+        # Fetch all customers in one query
+        customers_resp = supabase.table("users").select("id, name, profile_pic").in_("id", customer_ids).execute()
+        customer_map = {c['id']: c for c in customers_resp.data}
+
+        # Fetch all workers in one query
+        workers_resp = supabase.table("workers").select("id, name, profile_pic, work").in_("id", worker_ids).execute()
+        worker_map = {w['id']: w for w in workers_resp.data}
+
+        # Enrich bookings
         for b in bookings:
-            c_resp = supabase.table("users").select("name, profile_pic").eq("id", b['customer_id']).execute()
-            if c_resp.data:
-                b['customer_name'] = c_resp.data[0].get('name')
-                b['customer_profile_pic'] = c_resp.data[0].get('profile_pic')
-            
-            w_resp = supabase.table("workers").select("name, profile_pic, work").eq("id", b['worker_id']).execute()
-            if w_resp.data:
-                b['worker_name'] = w_resp.data[0].get('name')
-                b['worker_work'] = w_resp.data[0].get('work')
-                b['worker_profile_pic'] = w_resp.data[0].get('profile_pic')
+            c_info = customer_map.get(b['customer_id'], {})
+            w_info = worker_map.get(b['worker_id'], {})
+
+            b['customer_name'] = c_info.get('name', 'Unknown')
+            b['customer_profile_pic'] = c_info.get('profile_pic')
+
+            b['worker_name'] = w_info.get('name', 'Unknown')
+            b['worker_work'] = w_info.get('work', 'N/A')
+            b['worker_profile_pic'] = w_info.get('profile_pic')
 
         return jsonify(bookings), 200
     except Exception as e:
