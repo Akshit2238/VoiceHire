@@ -26,6 +26,7 @@
 
         /* ── Status badge colours ── */
         .badge-booked       { background: rgba(234,179,8,0.15);  color: #fbbf24; border: 1px solid rgba(234,179,8,0.3); }
+        .badge-pending      { background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); }
         .badge-work-started { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
         .badge-completed    { background: rgba(34,197,94,0.15);  color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
         .badge-cancelled    { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
@@ -127,6 +128,7 @@
         </div>
         <div id="status-badge" class="self-start sm:self-center px-4 py-2 rounded-full text-sm font-black uppercase tracking-widest
             {% if booking.status == 'Booked' %}badge-booked
+            {% elif booking.status == 'Pending' %}badge-pending
             {% elif booking.status == 'Work Started' %}badge-work-started
             {% elif booking.status == 'Completed' %}badge-completed
             {% else %}badge-cancelled{% endif %}">
@@ -201,8 +203,36 @@
         {% endif %}
     </div>
 
+    <!-- Worker Accept/Decline Section -->
+    {% if not is_customer and booking.status == 'Pending' %}
+    <div id="worker-actions" class="glass-dark rounded-3xl p-8 flex flex-col gap-6 text-center border-2 border-secondary/20">
+        <div>
+            <h2 class="text-white font-black text-lg">New Booking Request</h2>
+            <p class="text-slate-400 text-sm mt-1">Accept to confirm this job and share your QR check-in</p>
+        </div>
+        <div class="flex gap-4">
+            <button onclick="acceptBooking()" class="flex-1 h-14 bg-green-500 text-white font-black rounded-2xl hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20">
+                <span class="material-symbols-outlined">check_circle</span> Accept
+            </button>
+            <button onclick="declineBooking()" class="flex-1 h-14 bg-red-500/10 text-red-400 border border-red-500/20 font-black rounded-2xl hover:bg-red-500/20 transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">close</span> Decline
+            </button>
+        </div>
+    </div>
+    {% elif is_customer and booking.status == 'Pending' %}
+    <div class="glass-dark rounded-3xl p-8 flex flex-col items-center gap-4 text-center border border-yellow-500/10">
+        <div class="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 animate-pulse">
+            <span class="material-symbols-outlined text-3xl">hourglass_empty</span>
+        </div>
+        <div>
+            <h2 class="text-white font-black text-lg">Waiting for Confirmation</h2>
+            <p class="text-slate-400 text-sm mt-1">The worker has been notified. We'll show the QR code once they accept.</p>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- QR Code Section -->
-    {% if booking.status != 'Cancelled' %}
+    {% if booking.status != 'Cancelled' and booking.status != 'Pending' %}
     <div class="glass-dark rounded-3xl p-8 flex flex-col items-center gap-6 text-center">
         <div>
             <h2 class="text-white font-black text-lg">Verification QR Code</h2>
@@ -339,6 +369,11 @@
         badge.className = `self-start sm:self-center px-4 py-2 rounded-full text-sm font-black uppercase tracking-widest ${classMap[status] || 'badge-cancelled'}`;
         badge.textContent = status;
 
+        if (status === 'Booked') {
+            showToast('Booking has been accepted by the worker!', 'success');
+            // Refresh to show QR
+            setTimeout(() => window.location.reload(), 1500);
+        }
         if (status === 'Work Started') {
             showToast('Worker has checked in! Work is starting.', 'info');
             // Hide scan button
@@ -439,6 +474,36 @@
         } catch(e) {
             showToast('Connection error', 'error');
         }
+    }
+
+    // ── Accept / Decline ──────────────────────────────────
+    async function acceptBooking() {
+        try {
+            const res  = await fetch(`/api/bookings/${BOOKING_ID}/accept`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Booking accepted!', 'success');
+                applyStatus('Booked');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(data.error || 'Failed', 'error');
+            }
+        } catch(e) { showToast('Connection error', 'error'); }
+    }
+
+    async function declineBooking() {
+        if (!confirm('Decline this booking?')) return;
+        try {
+            const res  = await fetch(`/api/bookings/${BOOKING_ID}/decline`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Booking declined.', 'info');
+                applyStatus('Cancelled');
+                setTimeout(() => window.location.href = '/bookings', 1500);
+            } else {
+                showToast(data.error || 'Failed', 'error');
+            }
+        } catch(e) { showToast('Connection error', 'error'); }
     }
 
     // ── Cancel Booking ─────────────────────────────────────
