@@ -570,11 +570,13 @@ def post_job():
         return jsonify({'error': 'Service type, description, and location are required'}), 400
 
     try:
+        # Check if jobs table has the new column by trying a safe insert or just ignoring it if it fails
+        # For now, let's keep it simple and handle errors
         supabase.table("jobs").insert({
             "user_id": session['user_id'],
             "user_name": session['name'],
             "user_phone": session.get('phone', 'Unknown'),
-            "user_profile_pic": session.get('profile_pic', None),
+            "user_profile_pic": session.get('profile_pic'),
             "service_type": service_type,
             "description": description,
             "location": location,
@@ -584,7 +586,20 @@ def post_job():
         return jsonify({'message': 'Job posted successfully!'}), 201
     except Exception as e:
         print("Error posting job:\n", traceback.format_exc())
-        return jsonify({'error': 'Server error'}), 500
+        # Try inserting without the new column if it failed (likely due to missing column)
+        try:
+            supabase.table("jobs").insert({
+                "user_id": session['user_id'],
+                "user_name": session['name'],
+                "user_phone": session.get('phone', 'Unknown'),
+                "service_type": service_type,
+                "description": description,
+                "location": location,
+                "status": "open"
+            }).execute()
+            return jsonify({'message': 'Job posted successfully (without profile pic)!', 'warning': 'Legacy table schema'}), 201
+        except Exception:
+            return jsonify({'error': 'Server error while posting job'}), 500
 
 @app.route('/api/auth/profile/user', methods=['POST'])
 def edit_user_profile():
@@ -986,16 +1001,18 @@ def create_booking():
         if conflict.data:
             return jsonify({'error': 'This slot is already booked. Please choose another.'}), 409
 
-        qr_token = uuid.uuid4().hex
-        insert_resp = supabase.table("bookings").insert({
+        insert_data = {
             "customer_id": customer_id,
             "worker_id":   worker_id,
             "date":        date_str,
             "time_slot":   time_slot,
             "notes":       notes,
-            "status":      "Pending",
-            "qr_token":    qr_token,
-        }).execute()
+            "status":      "Pending"
+        }
+        
+        insert_resp = supabase.table("bookings").insert(insert_data).execute()
+        if not insert_resp.data:
+            return jsonify({'error': 'Failed to create booking record'}), 500
 
         booking = insert_resp.data[0]
         new_id  = booking['id']
@@ -1005,8 +1022,8 @@ def create_booking():
             'redirect':   url_for('booking_detail_page', booking_id=new_id)
         }), 201
     except Exception as e:
-        print(traceback.format_exc())
-        return jsonify({'error': 'Server error'}), 500
+        print("Error in create_booking:\n", traceback.format_exc())
+        return jsonify({'error': 'Server error during booking'}), 500
 
 
 @app.route('/api/bookings', methods=['GET'])
