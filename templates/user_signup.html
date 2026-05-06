@@ -149,7 +149,7 @@
                         help.') }}</p>
                 </div>
 
-                <form id="user-signup-form" class="glass-panel rounded-3xl p-8 flex flex-col gap-8">
+                <form id="user-signup-form" class="glass-panel rounded-3xl p-8 flex flex-col gap-8" enctype="multipart/form-data">
                     <!-- Full Name -->
                     <div class="relative group">
                         <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest" for="us-name">{{
@@ -192,6 +192,15 @@
                         </div>
                     </div>
 
+                    <!-- Profile Pic -->
+                    <div class="relative group">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest"
+                            for="us-profile-pic">{{ t('Profile Picture') }}</label>
+                        <input
+                            class="block w-full text-xs text-slate-500 mt-2 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-secondary file:text-white hover:file:opacity-90 transition-all cursor-pointer"
+                            id="us-profile-pic" name="profile_pic" type="file" accept="image/*" />
+                    </div>
+
                     <!-- Submit -->
                     <button type="submit"
                         class="w-full h-15 py-4 bg-primary text-white rounded-2xl font-black text-lg flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-2xl shadow-slate-200">
@@ -219,6 +228,7 @@
                 togglePw.querySelector('.material-symbols-outlined').textContent = isText ? 'visibility' : 'visibility_off';
             });
         }
+        
     </script>
 </body>
 

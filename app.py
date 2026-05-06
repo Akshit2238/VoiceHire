@@ -30,10 +30,11 @@ UPLOAD_FOLDER = os.path.join('static', 'uploads')
 AUDIO_FOLDER = os.path.join(UPLOAD_FOLDER, 'audio')
 VIDEO_FOLDER = os.path.join(UPLOAD_FOLDER, 'video')
 ID_FOLDER = os.path.join(UPLOAD_FOLDER, 'ids')
-
+PROFILE_PIC_FOLDER = os.path.join(UPLOAD_FOLDER, 'profile_pics')
 os.makedirs(AUDIO_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
 os.makedirs(ID_FOLDER, exist_ok=True)
+os.makedirs(PROFILE_PIC_FOLDER, exist_ok=True)
 
 ALLOWED_AUDIO_EXTENSIONS = {'mp3', 'wav', 'ogg', 'm4a', 'aac'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'webm', 'ogg', 'mov'}
@@ -130,7 +131,15 @@ def stitch_worker_dashboard():
 def user_dashboard():
     if 'user_id' not in session or session.get('role') != 'user':
         return redirect(url_for('login_page', role='user'))
-    return render_template('user_dashboard.html', name=session.get('name'))
+    try:
+        response = supabase.table("users").select("*").eq("id", session['user_id']).execute()
+        if not response.data:
+            session.clear()
+            return redirect(url_for('login_page', role='user'))
+        user_data = response.data[0]
+        return render_template('user_dashboard.html', user=user_data)
+    except Exception as e:
+        return f"Database error: {e}"
 
 @app.route('/dashboard/worker')
 def worker_dashboard():
@@ -207,10 +216,20 @@ def signup_user():
         if existing.data:
             return jsonify({'error': 'Phone number already registered'}), 400
 
+        profile_pic = request.files.get('profile_pic')
+        profile_pic_path = None
+        if profile_pic and profile_pic.filename != '':
+            if not allowed_file(profile_pic.filename, ALLOWED_IMAGE_EXTENSIONS):
+                return jsonify({'error': 'Invalid image file type for profile picture'}), 400
+            filename = f"{uuid.uuid4().hex}_{secure_filename(profile_pic.filename)}"
+            profile_pic.save(os.path.join(PROFILE_PIC_FOLDER, filename))
+            profile_pic_path = f'uploads/profile_pics/{filename}'
+
         response = supabase.table("users").insert({
             "name": name,
             "phone": phone,
-            "password": hashed_pw
+            "password": hashed_pw,
+            "profile_pic": profile_pic_path
         }).execute()
 
         user_id = response.data[0]['id']
@@ -245,6 +264,7 @@ def signup_worker():
 
     voice_path = None
     video_path = None
+    profile_pic_path = None
 
     try:
         existing = supabase.table("workers").select("id").eq("phone", phone).execute()
@@ -274,6 +294,14 @@ def signup_worker():
             id_file.save(os.path.join(ID_FOLDER, filename))
             id_path = f'uploads/ids/{filename}'
 
+        profile_pic = request.files.get('profile_pic')
+        if profile_pic and profile_pic.filename != '':
+            if not allowed_file(profile_pic.filename, ALLOWED_IMAGE_EXTENSIONS):
+                return jsonify({'error': 'Invalid image file type for profile picture'}), 400
+            filename = f"{uuid.uuid4().hex}_{secure_filename(profile_pic.filename)}"
+            profile_pic.save(os.path.join(PROFILE_PIC_FOLDER, filename))
+            profile_pic_path = f'uploads/profile_pics/{filename}'
+
         lat = request.form.get('latitude')
         lng = request.form.get('longitude')
 
@@ -286,6 +314,7 @@ def signup_worker():
             "voice_note": voice_path,
             "video": video_path,
             "id_proof_path": id_path,
+            "profile_pic": profile_pic_path,
             "latitude": float(lat) if lat else None,
             "longitude": float(lng) if lng else None,
             "is_available": True,
@@ -379,6 +408,7 @@ def edit_worker_profile():
         voice_path = existing.get('voice_note')
         video_path = existing.get('video')
         id_path = existing.get('id_proof_path')
+        profile_pic_path = existing.get('profile_pic')
 
         if voice_file and voice_file.filename != '':
             if not allowed_file(voice_file.filename, ALLOWED_AUDIO_EXTENSIONS):
@@ -393,7 +423,6 @@ def edit_worker_profile():
             filename = f"{uuid.uuid4().hex}_{secure_filename(video_file.filename)}"
             video_file.save(os.path.join(VIDEO_FOLDER, filename))
             video_path = f'uploads/video/{filename}'
-
         id_file = request.files.get('id_proof')
         if id_file and id_file.filename != '':
             if not allowed_file(id_file.filename, ALLOWED_IMAGE_EXTENSIONS):
@@ -401,6 +430,14 @@ def edit_worker_profile():
             filename = f"{uuid.uuid4().hex}_{secure_filename(id_file.filename)}"
             id_file.save(os.path.join(ID_FOLDER, filename))
             id_path = f'uploads/ids/{filename}'
+
+        profile_pic = request.files.get('profile_pic')
+        if profile_pic and profile_pic.filename != '':
+            if not allowed_file(profile_pic.filename, ALLOWED_IMAGE_EXTENSIONS):
+                return jsonify({'error': 'Invalid image file type for profile picture'}), 400
+            filename = f"{uuid.uuid4().hex}_{secure_filename(profile_pic.filename)}"
+            profile_pic.save(os.path.join(PROFILE_PIC_FOLDER, filename))
+            profile_pic_path = f'uploads/profile_pics/{filename}'
 
         lat = request.form.get('latitude')
         lng = request.form.get('longitude')
@@ -413,6 +450,7 @@ def edit_worker_profile():
             "voice_note": voice_path,
             "video": video_path,
             "id_proof_path": id_path,
+            "profile_pic": profile_pic_path,
             "latitude": float(lat) if lat else None,
             "longitude": float(lng) if lng else None,
         }
@@ -536,6 +574,7 @@ def post_job():
             "user_id": session['user_id'],
             "user_name": session['name'],
             "user_phone": session.get('phone', 'Unknown'),
+            "user_profile_pic": session.get('profile_pic', None),
             "service_type": service_type,
             "description": description,
             "location": location,
@@ -545,6 +584,48 @@ def post_job():
         return jsonify({'message': 'Job posted successfully!'}), 201
     except Exception as e:
         print("Error posting job:\n", traceback.format_exc())
+        return jsonify({'error': 'Server error'}), 500
+
+@app.route('/api/auth/profile/user', methods=['POST'])
+def edit_user_profile():
+    if 'user_id' not in session or session['role'] != 'user':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    name = safe_str(request.form.get('name'))
+    phone = safe_str(request.form.get('phone'))
+    password = safe_str(request.form.get('password'))
+
+    if not all([name, phone]):
+        return jsonify({'error': 'Name and phone are required'}), 400
+
+    user_id = session['user_id']
+    profile_pic = request.files.get('profile_pic')
+    
+    try:
+        existing_resp = supabase.table("users").select("profile_pic").eq("id", user_id).execute()
+        existing = existing_resp.data[0]
+        profile_pic_path = existing.get('profile_pic')
+
+        if profile_pic and profile_pic.filename != '':
+            if not allowed_file(profile_pic.filename, ALLOWED_IMAGE_EXTENSIONS):
+                return jsonify({'error': 'Invalid image file type'}), 400
+            filename = f"{uuid.uuid4().hex}_{secure_filename(profile_pic.filename)}"
+            profile_pic.save(os.path.join(PROFILE_PIC_FOLDER, filename))
+            profile_pic_path = f'uploads/profile_pics/{filename}'
+
+        update_data = {
+            "name": name,
+            "phone": phone,
+            "profile_pic": profile_pic_path
+        }
+        if password:
+            update_data["password"] = generate_password_hash(password)
+
+        supabase.table("users").update(update_data).eq("id", user_id).execute()
+        session['name'] = name
+        return jsonify({'message': 'Profile updated successfully', 'redirect': url_for('user_dashboard')}), 200
+    except Exception as e:
+        print(traceback.format_exc())
         return jsonify({'error': 'Server error'}), 500
 
 @app.route('/api/jobs', methods=['GET'])
@@ -801,10 +882,10 @@ def booking_detail_page(booking_id):
         if booking['customer_id'] != uid and booking['worker_id'] != uid:
             return "Unauthorized", 403
 
-        w_resp = supabase.table("workers").select("name, phone, work").eq("id", booking['worker_id']).execute()
+        w_resp = supabase.table("workers").select("name, phone, work, profile_pic").eq("id", booking['worker_id']).execute()
         worker = w_resp.data[0] if w_resp.data else {}
 
-        c_resp = supabase.table("users").select("name, phone").eq("id", booking['customer_id']).execute()
+        c_resp = supabase.table("users").select("name, phone, profile_pic").eq("id", booking['customer_id']).execute()
         customer = c_resp.data[0] if c_resp.data else {}
 
         token = make_qr_token(booking_id)
@@ -933,29 +1014,23 @@ def get_my_bookings():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     uid  = session['user_id']
-    role = session.get('role')
     try:
-        if role == 'user':
-            resp = supabase.table("bookings").select("*").eq("customer_id", uid).order("date", desc=False).execute()
-        else:
-            resp = supabase.table("bookings").select("*").eq("worker_id", uid).order("date", desc=False).execute()
-
+        # Get all bookings where user is either customer or worker
+        resp = supabase.table("bookings").select("*").or_(f"customer_id.eq.{uid},worker_id.eq.{uid}").order("date", desc=False).execute()
         bookings = resp.data
-        worker_ids   = list({b['worker_id']   for b in bookings})
-        customer_ids = list({b['customer_id'] for b in bookings})
-        worker_map, customer_map = {}, {}
-
-        if worker_ids:
-            wr = supabase.table("workers").select("id, name, work").in_("id", worker_ids).execute()
-            worker_map = {w['id']: w for w in wr.data}
-        if customer_ids:
-            cr = supabase.table("users").select("id, name").in_("id", customer_ids).execute()
-            customer_map = {c['id']: c for c in cr.data}
-
+        
+        # Enrich with names and profile pics
         for b in bookings:
-            b['worker_name']   = worker_map.get(b['worker_id'],   {}).get('name', '—')
-            b['worker_work']   = worker_map.get(b['worker_id'],   {}).get('work', '')
-            b['customer_name'] = customer_map.get(b['customer_id'], {}).get('name', '—')
+            c_resp = supabase.table("users").select("name, profile_pic").eq("id", b['customer_id']).execute()
+            if c_resp.data:
+                b['customer_name'] = c_resp.data[0].get('name')
+                b['customer_profile_pic'] = c_resp.data[0].get('profile_pic')
+            
+            w_resp = supabase.table("workers").select("name, profile_pic, work").eq("id", b['worker_id']).execute()
+            if w_resp.data:
+                b['worker_name'] = w_resp.data[0].get('name')
+                b['worker_work'] = w_resp.data[0].get('work')
+                b['worker_profile_pic'] = w_resp.data[0].get('profile_pic')
 
         return jsonify(bookings), 200
     except Exception as e:

@@ -179,14 +179,32 @@
             Booking Details
         </h2>
         <div class="grid grid-cols-2 gap-4">
-            <div class="glass-light rounded-2xl p-4">
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Worker</p>
-                <p class="text-white font-black text-sm">{{ worker.name }}</p>
-                <p class="text-slate-400 text-xs font-semibold mt-0.5">{{ worker.work }}</p>
+            <div class="glass-light rounded-2xl p-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary overflow-hidden shrink-0">
+                    {% if worker.profile_pic %}
+                    <img src="{{ url_for('static', filename=worker.profile_pic) }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="material-symbols-outlined text-xl">handyman</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Worker</p>
+                    <p class="text-white font-black text-sm">{{ worker.name }}</p>
+                    <p class="text-slate-400 text-xs font-semibold mt-0.5">{{ worker.work }}</p>
+                </div>
             </div>
-            <div class="glass-light rounded-2xl p-4">
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Customer</p>
-                <p class="text-white font-black text-sm">{{ customer.name }}</p>
+            <div class="glass-light rounded-2xl p-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary overflow-hidden shrink-0">
+                    {% if customer.profile_pic %}
+                    <img src="{{ url_for('static', filename=customer.profile_pic) }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="material-symbols-outlined text-xl">person</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Customer</p>
+                    <p class="text-white font-black text-sm">{{ customer.name }}</p>
+                </div>
             </div>
             <div class="glass-light rounded-2xl p-4">
                 <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Date</p>

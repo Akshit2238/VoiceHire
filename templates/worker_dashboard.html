@@ -124,12 +124,16 @@
         </nav>
         <div class="vh-sidebar-footer p-4 border-t border-slate-100">
             <div class="vh-user-chip bg-slate-50 p-3 rounded-2xl flex items-center gap-3 mb-2">
-                <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary overflow-hidden">
+                    {% if worker.profile_pic %}
+                    <img src="{{ url_for('static', filename=worker.profile_pic) }}" class="w-full h-full object-cover">
+                    {% else %}
                     <span class="material-symbols-outlined">handyman</span>
+                    {% endif %}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-black truncate">{{ worker.name }}</p>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{{ worker.work }}</p>
+                    <p class="text-xs font-black text-primary truncate">{{ worker.name }}</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ t('Worker') }}</p>
                 </div>
             </div>
             <button class="vh-nav-item w-full text-red-500 hover:bg-red-50 hover:text-red-600"
@@ -396,6 +400,11 @@
                                             <label class="text-[10px] font-black text-slate-500">{{ t('Video Pitch')
                                                 }}</label>
                                             <input type="file" name="video" accept="video/*" class="w-full text-xs">
+                                        </div>
+                                        <div class="sm:col-span-2 space-y-1.5">
+                                            <label class="text-[10px] font-black text-slate-500">{{ t('Profile Picture')
+                                                }}</label>
+                                            <input type="file" name="profile_pic" accept="image/*" class="w-full text-xs">
                                         </div>
                                         <div class="sm:col-span-2 space-y-1.5">
                                             <label class="text-[10px] font-black text-slate-500">{{ t('Identity Proof')

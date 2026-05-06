@@ -157,13 +157,16 @@
         </nav>
         <div class="vh-sidebar-footer p-4 border-t border-slate-100">
             <div class="vh-user-chip bg-slate-50 p-3 rounded-2xl flex items-center gap-3 mb-2">
-                <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary overflow-hidden">
+                    {% if user.profile_pic %}
+                    <img src="{{ url_for('static', filename=user.profile_pic) }}" class="w-full h-full object-cover">
+                    {% else %}
                     <span class="material-symbols-outlined">person</span>
+                    {% endif %}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-black truncate">{{ t('Customer Account') }}</p>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{{ t('Verified Member') }}
-                    </p>
+                    <p class="text-xs font-black text-primary truncate">{{ user.name }}</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ t('Customer') }}</p>
                 </div>
             </div>
             <button class="vh-nav-item w-full text-red-500 hover:bg-red-50 hover:text-red-600"
@@ -306,6 +309,43 @@
                         </button>
                     </div>
                 </form>
+            </section>
+
+            <!-- Profile Settings Section -->
+            <section id="profile-section" class="space-y-6 pt-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xl font-black tracking-tight text-primary">{{ t('Profile Settings') }}</h3>
+                </div>
+                <div class="glass-panel rounded-[32px] p-8">
+                    <form id="user-edit-form" class="space-y-6" enctype="multipart/form-data">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Full Name') }}</label>
+                                <input type="text" name="name" value="{{ user.name }}" required
+                                    class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Phone Number') }}</label>
+                                <input type="tel" name="phone" value="{{ user.phone }}" required
+                                    class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Security (New Password)') }}</label>
+                            <input type="password" name="password" placeholder="{{ t('Keep empty to stay the same') }}"
+                                class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Profile Picture') }}</label>
+                            <input type="file" name="profile_pic" accept="image/*"
+                                class="block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-secondary file:text-white hover:file:opacity-90 transition-all cursor-pointer">
+                        </div>
+                        <button type="submit" id="btn-update-user"
+                            class="w-full h-15 bg-primary text-white font-black rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-slate-200">
+                            {{ t('Update Profile') }}
+                        </button>
+                    </form>
+                </div>
             </section>
 
             <!-- Upcoming Bookings -->

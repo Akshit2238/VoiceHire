@@ -16,6 +16,12 @@ const app = {
         const userSignupForm = document.getElementById('user-signup-form');
         if (userSignupForm) userSignupForm.addEventListener('submit', (e) => this.handleUserSignup(e));
 
+        const userEditForm = document.getElementById('user-edit-form');
+        if (userEditForm) userEditForm.addEventListener('submit', (e) => this.handleUserEdit(e));
+
+        const workerEditForm = document.getElementById('worker-edit-form');
+        if (workerEditForm) workerEditForm.addEventListener('submit', (e) => this.handleWorkerEdit(e));
+
         const workerSignupForm = document.getElementById('worker-signup-form');
         if (workerSignupForm) workerSignupForm.addEventListener('submit', (e) => this.handleWorkerSignup(e));
 
@@ -79,15 +85,13 @@ const app = {
 
     async handleUserSignup(e) {
         e.preventDefault();
-        const name = document.getElementById('us-name').value;
-        const phone = document.getElementById('us-phone').value;
-        const password = document.getElementById('us-password').value;
+        const formElement = document.getElementById('user-signup-form');
+        const formData = new FormData(formElement);
 
         try {
             const res = await fetch('/api/auth/signup/user', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, phone, password })
+                body: formData
             });
             const data = await res.json();
             if (res.ok) {
@@ -528,9 +532,10 @@ const app = {
                 const bottomDiv = document.createElement('div');
                 bottomDiv.className = 'flex items-center justify-between mt-2 pt-4 border-t border-slate-100';
 
-                const userDiv = document.createElement('div');
-                userDiv.className = 'flex items-center gap-2';
-                userDiv.innerHTML = `<div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><span class="material-symbols-outlined text-sm">person</span></div>`;
+                userDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 overflow-hidden">
+                        ${j.user_profile_pic ? `<img src="/static/${j.user_profile_pic}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-sm">person</span>`}
+                    </div>`;
                 const userName = document.createElement('span');
                 userName.className = 'text-sm font-medium text-slate-700';
                 userName.textContent = j.user_name;
@@ -743,8 +748,10 @@ const app = {
             container.innerHTML = upcoming.slice(0, 4).map(b => `
                 <a href="/bookings/${b.id}" class="glass-panel p-4 rounded-2xl border border-slate-100 flex items-center justify-between hover:border-secondary/30 transition-all">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                            <span class="material-symbols-outlined text-xl">calendar_month</span>
+                        <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary overflow-hidden">
+                            ${(isWorker ? b.customer_profile_pic : b.worker_profile_pic) 
+                                ? `<img src="/static/${isWorker ? b.customer_profile_pic : b.worker_profile_pic}" class="w-full h-full object-cover">` 
+                                : `<span class="material-symbols-outlined text-xl">calendar_month</span>`}
                         </div>
                         <div>
                             <p class="font-black text-slate-800 text-sm">${isWorker ? b.customer_name : b.worker_name}</p>
@@ -779,8 +786,10 @@ const app = {
             container.innerHTML = pending.map(b => `
                 <div class="glass-panel p-6 rounded-[24px] border border-amber-100/50 hover:shadow-xl hover:shadow-amber-500/5 transition-all space-y-4 bg-white">
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-sm">
-                            <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">person</span>
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-sm overflow-hidden">
+                            ${b.customer_profile_pic 
+                                ? `<img src="/static/${b.customer_profile_pic}" class="w-full h-full object-cover">` 
+                                : `<span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">person</span>`}
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="font-black text-slate-900 truncate">${b.customer_name}</p>
@@ -1021,8 +1030,8 @@ const app = {
                 const infoWrapper = document.createElement('div');
                 infoWrapper.className = 'flex items-center gap-4';
                 infoWrapper.innerHTML = `
-                    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                        <span class="material-symbols-outlined text-3xl">person</span>
+                    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden">
+                        ${w.profile_pic ? `<img src="/static/${w.profile_pic}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-3xl">person</span>`}
                     </div>
                 `;
 
@@ -1140,6 +1149,33 @@ const app = {
             });
         } catch (error) {
             listDiv.innerHTML = `<div class="text-red-400 italic">Error loading workers.</div>`;
+        }
+    },
+
+    async handleUserEdit(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-update-user');
+        if (btn) { btn.innerHTML = "Saving..."; btn.disabled = true; }
+
+        const formElement = document.getElementById('user-edit-form');
+        const formData = new FormData(formElement);
+
+        try {
+            const res = await fetch('/api/auth/profile/user', {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                alert("Profile updated successfully!");
+                location.reload();
+            } else {
+                const data = await res.json();
+                alert(data.error || "Update failed");
+            }
+        } catch (err) {
+            alert("Connection error");
+        } finally {
+            if (btn) { btn.innerHTML = "Update Profile"; btn.disabled = false; }
         }
     },
 
