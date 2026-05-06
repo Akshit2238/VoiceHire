@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html class="light" lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Worker Dashboard - VoiceHire</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="/static/css/responsive.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/responsive.css" />
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -27,7 +30,10 @@
         }
     </script>
     <style>
-        * { font-family: 'Inter', sans-serif; }
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
         .glass-card {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(24px);
@@ -36,6 +42,7 @@
         }
     </style>
 </head>
+
 <body class="bg-background text-on-surface antialiased">
 
     <!-- ═══ DESKTOP SIDEBAR ═══ -->
@@ -99,7 +106,8 @@
                     <h2 class="text-3xl font-extrabold text-primary">Worker Dashboard</h2>
                     <p class="text-on-surface-variant text-lg mt-1">Active in your area. Ready to assist.</p>
                 </div>
-                <button class="h-14 min-w-[200px] bg-primary text-white rounded-full flex items-center justify-center gap-3 px-8 font-bold shadow-lg hover:opacity-90 active:scale-95 transition-all">
+                <button
+                    class="h-14 min-w-[200px] bg-primary text-white rounded-full flex items-center justify-center gap-3 px-8 font-bold shadow-lg hover:opacity-90 active:scale-95 transition-all">
                     <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">radar</span>
                     Find Work Now
                 </button>
@@ -116,12 +124,14 @@
 
             <!-- Job Grid -->
             <div class="vh-jobs-grid">
-                
+
                 <!-- Job Card 1 -->
-                <article class="glass-card rounded-2xl p-6 shadow-sm flex flex-col gap-4 hover:shadow-md transition-shadow">
+                <article
+                    class="glass-card rounded-2xl p-6 shadow-sm flex flex-col gap-4 hover:shadow-md transition-shadow">
                     <div class="flex items-start justify-between gap-4">
                         <div class="flex items-center gap-4">
-                            <img alt="Profile" class="w-14 h-14 rounded-full object-cover border-2 border-secondary/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBbg3IxnsdXrLo8uEmFFAaB0qQDlnz8QXfrNH48seGO0pTIHNkgTOj40Bz0942lKyiMraVNl79IKMj6F5HhKpfFI9rSze0EMksa1-GIyqnKNtzlrdYSEN2oElxBwLypZEBPkXn4U3Uplqbaro5OsHYYvJW67QKVH-2f8Nyoass8n_ap2Bky64MgkWZ3GJ-6AemsL7lCvzug-R2uwnK4aA54X_X5OOEA9m_Gph8gcfeVeMuCj8sjipY6q8eZ39IAJj7e2EGo9QyCnfp"/>
+                            <img alt="Profile" class="w-14 h-14 rounded-full object-cover border-2 border-secondary/20"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBbg3IxnsdXrLo8uEmFFAaB0qQDlnz8QXfrNH48seGO0pTIHNkgTOj40Bz0942lKyiMraVNl79IKMj6F5HhKpfFI9rSze0EMksa1-GIyqnKNtzlrdYSEN2oElxBwLypZEBPkXn4U3Uplqbaro5OsHYYvJW67QKVH-2f8Nyoass8n_ap2Bky64MgkWZ3GJ-6AemsL7lCvzug-R2uwnK4aA54X_X5OOEA9m_Gph8gcfeVeMuCj8sjipY6q8eZ39IAJj7e2EGo9QyCnfp" />
                             <div>
                                 <h4 class="font-bold text-xl text-on-surface">Assemble Bookshelf</h4>
                                 <p class="text-secondary font-bold flex items-center gap-1 mt-1 text-sm">
@@ -130,13 +140,16 @@
                                 </p>
                             </div>
                         </div>
-                        <span class="bg-slate-100 text-on-surface-variant font-bold px-3 py-1 rounded-full text-xs">Today</span>
+                        <span
+                            class="bg-slate-100 text-on-surface-variant font-bold px-3 py-1 rounded-full text-xs">Today</span>
                     </div>
 
                     <!-- Voice Preview -->
                     <div class="bg-slate-50 rounded-xl p-3 flex items-center gap-4 border border-outline-variant/30">
-                        <button class="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center shrink-0 shadow-sm active:scale-90 transition-transform">
-                            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                        <button
+                            class="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center shrink-0 shadow-sm active:scale-90 transition-transform">
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                         </button>
                         <div class="flex-grow flex items-center gap-1 h-6">
                             <div class="w-1 h-3 bg-secondary rounded-full"></div>
@@ -150,20 +163,26 @@
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <span class="px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant font-bold text-xs">Indoor</span>
-                        <span class="px-3 py-1.5 rounded-full border border-secondary/30 bg-secondary/10 text-secondary font-bold text-xs">Tools Required</span>
+                        <span
+                            class="px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant font-bold text-xs">Indoor</span>
+                        <span
+                            class="px-3 py-1.5 rounded-full border border-secondary/30 bg-secondary/10 text-secondary font-bold text-xs">Tools
+                            Required</span>
                     </div>
 
-                    <button class="w-full h-12 mt-2 border-2 border-primary text-primary hover:bg-slate-50 rounded-full flex items-center justify-center font-bold transition-colors">
+                    <button
+                        class="w-full h-12 mt-2 border-2 border-primary text-primary hover:bg-slate-50 rounded-full flex items-center justify-center font-bold transition-colors">
                         View Details
                     </button>
                 </article>
 
                 <!-- Job Card 2 -->
-                <article class="glass-card rounded-2xl p-6 shadow-sm flex flex-col gap-4 hover:shadow-md transition-shadow">
+                <article
+                    class="glass-card rounded-2xl p-6 shadow-sm flex flex-col gap-4 hover:shadow-md transition-shadow">
                     <div class="flex items-start justify-between gap-4">
                         <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 rounded-full bg-red-100 text-red-700 flex items-center justify-center font-bold text-xl border border-red-200">
+                            <div
+                                class="w-14 h-14 rounded-full bg-red-100 text-red-700 flex items-center justify-center font-bold text-xl border border-red-200">
                                 M
                             </div>
                             <div>
@@ -174,7 +193,8 @@
                                 </p>
                             </div>
                         </div>
-                        <span class="bg-red-50 text-red-600 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1">
+                        <span
+                            class="bg-red-50 text-red-600 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1">
                             <span class="material-symbols-outlined text-sm">schedule</span>
                             Urgent
                         </span>
@@ -182,8 +202,10 @@
 
                     <!-- Voice Preview -->
                     <div class="bg-slate-50 rounded-xl p-3 flex items-center gap-4 border border-outline-variant/30">
-                        <button class="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center shrink-0 shadow-sm active:scale-90 transition-transform">
-                            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                        <button
+                            class="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center shrink-0 shadow-sm active:scale-90 transition-transform">
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                         </button>
                         <div class="flex-grow flex items-center gap-1 h-6">
                             <div class="w-1 h-2 bg-outline-variant rounded-full"></div>
@@ -194,11 +216,15 @@
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <span class="px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant font-bold text-xs">Outdoor</span>
-                        <span class="px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant font-bold text-xs">Heavy Lifting</span>
+                        <span
+                            class="px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant font-bold text-xs">Outdoor</span>
+                        <span
+                            class="px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant font-bold text-xs">Heavy
+                            Lifting</span>
                     </div>
 
-                    <button class="w-full h-12 mt-2 border-2 border-primary text-primary hover:bg-slate-50 rounded-full flex items-center justify-center font-bold transition-colors">
+                    <button
+                        class="w-full h-12 mt-2 border-2 border-primary text-primary hover:bg-slate-50 rounded-full flex items-center justify-center font-bold transition-colors">
                         View Details
                     </button>
                 </article>
@@ -228,4 +254,5 @@
     </nav>
 
 </body>
+
 </html>

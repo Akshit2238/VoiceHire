@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +9,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
     <div class="app-container">
-        
+
         <!-- Initial Language Overlay -->
         <div id="language-overlay" class="overlay active">
             <div class="overlay-content">
@@ -21,7 +23,8 @@
                 <h2>Select Your Language<br><small>अपनी भाषा चुनें</small></h2>
                 <div class="lang-options">
                     <button class="primary-btn large-btn" onclick="app.selectInitialLanguage('en')">English</button>
-                    <button class="primary-btn large-btn" onclick="app.selectInitialLanguage('hi')">हिन्दी (Hindi)</button>
+                    <button class="primary-btn large-btn" onclick="app.selectInitialLanguage('hi')">हिन्दी
+                        (Hindi)</button>
                 </div>
             </div>
         </div>
@@ -45,7 +48,7 @@
 
         <!-- Main Content Area -->
         <main id="main-content">
-            
+
             <!-- Landing Section (Role Selection) -->
             <section id="landing-section" class="view-section active">
                 <div class="hero-content">
@@ -142,19 +145,22 @@
                     </button>
                     <h2 id="worker-title">Worker Registration</h2>
                 </div>
-                
+
                 <!-- AI Conversational UI -->
                 <div class="voice-assist-card" id="ai-builder-card">
-                    <h3 id="ai-builder-title" style="margin-bottom: 1rem; color: var(--primary-color);">AI Assistant Guide</h3>
+                    <h3 id="ai-builder-title" style="margin-bottom: 1rem; color: var(--primary-color);">AI Assistant
+                        Guide</h3>
                     <button id="btn-start-ai" class="voice-btn" onclick="app.startStepByStepAI()">
                         <i class="fa-solid fa-robot"></i>
                         <span id="speak-text">Start Voice Setup</span>
                     </button>
-                    
+
                     <div id="ai-conversation-area" style="display:none; margin-top: 1.5rem;">
                         <p id="ai-question" class="ai-speech-bubble">Hi! I will guide you.</p>
                         <div class="listening-indicator" id="ai-listening-anim">
-                            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
                         </div>
                         <p id="ai-transcript" class="transcript-box" style="display:none;"></p>
                     </div>
@@ -192,7 +198,7 @@
                         <label for="w-password" id="label-password">Password</label>
                         <input type="password" id="w-password" name="password" required>
                     </div>
-                    
+
                     <div class="media-upload-section" id="w-media-section">
                         <h3 id="media-title">Upload Portfolio (Optional)</h3>
                         <div class="form-group">
@@ -218,11 +224,12 @@
                     <h2 id="user-dash-title">User Dashboard</h2>
                     <p id="user-welcome">Welcome!</p>
                 </div>
-                
+
                 <!-- Post a Job Request -->
                 <div class="media-upload-section" style="background: #E0E7FF; border-color: #A5B4FC;">
                     <h3><i class="fa-solid fa-bullhorn"></i> Post a Job Request</h3>
-                    <p style="font-size: 0.875rem; margin-bottom: 1rem; color: #4338CA;">Need help right now? Post a query and available workers will contact you.</p>
+                    <p style="font-size: 0.875rem; margin-bottom: 1rem; color: #4338CA;">Need help right now? Post a
+                        query and available workers will contact you.</p>
                     <form id="job-post-form">
                         <div class="form-group">
                             <select id="j-service" required>
@@ -235,9 +242,11 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <input type="text" id="j-desc" required placeholder="Describe what needs to be done..." style="padding: 1rem;">
+                            <input type="text" id="j-desc" required placeholder="Describe what needs to be done..."
+                                style="padding: 1rem;">
                         </div>
-                        <button type="submit" class="submit-btn large-btn" style="margin-top: 0;">Post Job Request</button>
+                        <button type="submit" class="submit-btn large-btn" style="margin-top: 0;">Post Job
+                            Request</button>
                     </form>
                 </div>
 
@@ -264,7 +273,7 @@
                     <h2 id="worker-dash-title">Worker Dashboard</h2>
                     <p id="worker-welcome">Welcome!</p>
                 </div>
-                
+
                 <h3 style="margin-bottom: 1rem;"><i class="fa-solid fa-bell"></i> Available Job Queries</h3>
                 <div id="jobs-list" class="workers-grid" style="margin-bottom: 2rem;">
                     <!-- Jobs Injected Here -->
@@ -281,4 +290,5 @@
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
+
 </html>

@@ -69,6 +69,9 @@ def set_lang(lang_code):
 
 @app.route('/')
 def index():
+    if 'user_id' in session:
+        role = session.get('role')
+        return redirect(url_for('user_dashboard' if role == 'user' else 'worker_dashboard'))
     return render_template('select_language.html')
 
 @app.route('/home')
@@ -82,6 +85,15 @@ def home():
 
 @app.route('/gateway')
 def gateway():
+    # Voice AI assistant page
+    if 'user_id' in session:
+        role = session.get('role')
+        return redirect(url_for('user_dashboard' if role == 'user' else 'worker_dashboard'))
+    return render_template('gateway.html')
+
+@app.route('/welcome')
+def welcome():
+    # Voice-assisted welcome page (optional entry point)
     if 'user_id' in session:
         role = session.get('role')
         return redirect(url_for('user_dashboard' if role == 'user' else 'worker_dashboard'))
@@ -323,12 +335,12 @@ def login():
 @app.route('/api/auth/logout', methods=['POST'])
 def logout_api():
     session.clear()
-    return jsonify({'redirect': url_for('home')}), 200
+    return jsonify({'redirect': url_for('role_selection')}), 200
 
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('home'))
+    return redirect(url_for('role_selection'))
 
 # ---- DATA API ENDPOINTS ----
 
@@ -715,5 +727,9 @@ def translate_api():
     return jsonify({'translated': translated})
 
 if __name__ == '__main__':
+    print("Starting VoiceHire Server...")
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ['true', '1', 't']
-    app.run(debug=debug_mode)
+    port = int(os.environ.get('PORT', 5000))
+    print(f"Debug Mode: {debug_mode}, Port: {port}")
+    # Using '::' to listen on both IPv4 and IPv6 (handles cases where IPv4 loopback is broken)
+    app.run(host='::', port=port, debug=debug_mode)

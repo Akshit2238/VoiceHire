@@ -40,8 +40,8 @@ const app = {
     // Map Google Translate code to BCP-47 for Web Speech API
     getSpeechLangCode(langCode) {
         const map = {
-            'hi': 'hi-IN', 'bn': 'bn-IN', 'te': 'te-IN', 'mr': 'mr-IN', 
-            'ta': 'ta-IN', 'gu': 'gu-IN', 'kn': 'kn-IN', 'ml': 'ml-IN', 
+            'hi': 'hi-IN', 'bn': 'bn-IN', 'te': 'te-IN', 'mr': 'mr-IN',
+            'ta': 'ta-IN', 'gu': 'gu-IN', 'kn': 'kn-IN', 'ml': 'ml-IN',
             'pa': 'pa-IN', 'ur': 'ur-IN', 'or': 'or-IN', 'as': 'as-IN', 'en': 'en-IN'
         };
         return map[langCode] || 'en-US';
@@ -108,12 +108,12 @@ const app = {
         btn.disabled = true;
 
         const formElement = document.getElementById('worker-signup-form');
-        
+
         // Ensure we have lat/lng
         const lat = document.getElementById('w-lat').value;
         const lng = document.getElementById('w-lng').value;
         const location = document.getElementById('w-location').value;
-        
+
         if (!lat || !lng) {
             const coords = await this.geocodeAddress(location);
             if (coords) {
@@ -129,7 +129,7 @@ const app = {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (res.ok) {
                 const data = await res.json();
                 alert("Profile created successfully!");
@@ -153,7 +153,7 @@ const app = {
                 const data = await res.json();
                 window.location.href = data.redirect;
             }
-        } catch (e) {}
+        } catch (e) { }
     },
 
     async toggleAvailability(current) {
@@ -196,27 +196,27 @@ const app = {
 
         aiActive = true;
         aiStep = 0;
-        
+
         // Hide all parent containers of inputs
         const inputs = ['w-name', 'w-work', 'w-location', 'w-phone', 'w-password'];
         inputs.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.closest('.relative').style.display = 'none';
         });
-        
+
         document.getElementById('btn-start-ai').style.display = 'none';
         document.getElementById('ai-conversation-area').style.display = 'block';
-        
+
         this.askNextQuestion();
     },
 
     askNextQuestion() {
         if (!aiActive) return;
-        
+
         const qText = document.getElementById('ai-question');
         const anim = document.getElementById('ai-listening-anim');
         const tBox = document.getElementById('ai-transcript');
-        
+
         anim.style.display = 'none';
         tBox.style.display = 'none';
 
@@ -294,7 +294,7 @@ const app = {
         const recognition = new SpeechRecognition();
         const lang = this.getCurrentLang();
         recognition.lang = this.getSpeechLangCode(lang);
-        
+
         const btn = document.querySelector(`#${targetId}`).parentElement.querySelector('button[aria-label="Voice input"]');
         const icon = btn ? btn.querySelector('.material-symbols-outlined') : null;
         const input = document.getElementById(targetId);
@@ -332,24 +332,24 @@ const app = {
     getWordMap() {
         return {
             // English
-            'zero':0,'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9,
-            'oh':0, 'to':2, 'for':4,
+            'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
+            'oh': 0, 'to': 2, 'for': 4,
             // Hindi / Urdu / Marathi
-            'शून्य':0,'एक':1,'दो':2,'तीन':3,'चार':4,'पांच':5,'छह':6,'सात':7,'आठ':8,'नौ':9,
+            'शून्य': 0, 'एक': 1, 'दो': 2, 'तीन': 3, 'चार': 4, 'पांच': 5, 'छह': 6, 'सात': 7, 'आठ': 8, 'नौ': 9,
             // Bengali
-            'শূন্য':0,'এক':1,'দুই':2,'তিন':3,'চার':4,'পাঁচ':5,'ছয়':6,'সাত':7,'আট':8,'নয়':9,
+            'শূন্য': 0, 'এক': 1, 'দুই': 2, 'তিন': 3, 'চার': 4, 'পাঁচ': 5, 'ছয়': 6, 'সাত': 7, 'আট': 8, 'নয়': 9,
             // Telugu
-            'సున్నా':0,'ఒకటి':1,'రెండు':2,'మూడు':3,'నాలుగు':4,'అయిదు':5,'ఆరు':6,'ఏడు':7,'ఎనిమిది':8,'తొమ్మిది':9,
+            'సున్నా': 0, 'ఒకటి': 1, 'రెండు': 2, 'మూడు': 3, 'నాలుగు': 4, 'అయిదు': 5, 'ఆరు': 6, 'ఏడు': 7, 'ఎనిమిది': 8, 'తొమ్మిది': 9,
             // Tamil
-            'பூஜ்யம்':0,'ஒன்று':1,'இரண்டு':2,'மூன்று':3,'நான்கு':4,'ஐந்து':5,'ஆறு':6,'ஏழு':7,'எட்டு':8,'ஒன்பது':9,
+            'பூஜ்யம்': 0, 'ஒன்று': 1, 'இரண்டு': 2, 'மூன்று': 3, 'நான்கு': 4, 'ஐந்து': 5, 'ஆறு': 6, 'ஏழு': 7, 'எட்டு': 8, 'ஒன்பது': 9,
             // Gujarati
-            'શૂન્ય':0,'એક':1,'બે':2,'ત્રણ':3,'ચાર':4,'પાંચ':5,'છ':6,'સાત':7,'આઠ':8,'નવ':9,
+            'શૂન્ય': 0, 'એક': 1, 'બે': 2, 'ત્રણ': 3, 'ચાર': 4, 'પાંચ': 5, 'છ': 6, 'સાત': 7, 'આઠ': 8, 'નવ': 9,
             // Kannada
-            'ಸೊನ್ನೆ':0,'ಒಂದು':1,'ಎರಡು':2,'ಮೂರು':3,'ನಾಲ್ಕು':4,'ಐದು':5,'ಆರು':6,'ಏಳು':7,'ಎಂಟು':8,'ಒಂಬತ್ತು':9,
+            'ಸೊನ್ನೆ': 0, 'ಒಂದು': 1, 'ಎರಡು': 2, 'ಮೂರು': 3, 'ನಾಲ್ಕು': 4, 'ಐದು': 5, 'ಆರು': 6, 'ಏಳು': 7, 'ಎಂಟು': 8, 'ಒಂಬತ್ತು': 9,
             // Malayalam
-            'പൂജ്യം':0,'ഒന്ന്':1,'രണ്ട്':2,'മൂന്ന്':3,'നാല്':4,'അഞ്ച്':5,'ആറ്':6,'ഏഴ്':7,'എട്ട്':8,'ഒൻപത്':9,
+            'പൂജ്യം': 0, 'ഒന്ന്': 1, 'രണ്ട്': 2, 'മൂന്ന്': 3, 'നാല്': 4, 'അഞ്ച്': 5, 'ആറ്': 6, 'ഏഴ്': 7, 'എട്ട്': 8, 'ഒൻപത്': 9,
             // Punjabi
-            'ਸਿਫ਼ਰ':0,'ਇੱਕ':1,'ਦੋ':2,'ਤਿੰਨ':3,'ਚਾਰ':4,'ਪੰਜ':5,'ਛੇ':6,'ਸੱਤ':7,'ਅੱਠ':8,'ਨੌਂ':9,
+            'ਸਿਫ਼ਰ': 0, 'ਇੱਕ': 1, 'ਦੋ': 2, 'ਤਿੰਨ': 3, 'ਚਾਰ': 4, 'ਪੰਜ': 5, 'ਛੇ': 6, 'ਸੱਤ': 7, 'ਅੱਠ': 8, 'ਨੌਂ': 9,
         };
     },
 
@@ -388,7 +388,7 @@ const app = {
     processAnswer(text) {
         const trimmed = text.trim();
         const retryPrompt = document.getElementById('ai-retry').innerText;
-        
+
         if (aiStep === 0) {
             if (trimmed) {
                 document.getElementById('w-name').value = this.capitalize(trimmed);
@@ -397,7 +397,7 @@ const app = {
                 this.speak(retryPrompt, () => { this.askNextQuestion(); });
                 return;
             }
-        } 
+        }
         else if (aiStep === 1) {
             if (trimmed) {
                 document.getElementById('w-work').value = this.capitalize(trimmed);
@@ -437,7 +437,7 @@ const app = {
             // Password step removed for security and accessibility
             aiStep++;
         }
-        
+
         setTimeout(() => { this.askNextQuestion(); }, 1500);
     },
 
@@ -477,7 +477,7 @@ const app = {
     async fetchJobsForWorker(workType) {
         const listDiv = document.getElementById('jobs-list');
         if (!listDiv) return;
-        
+
         listDiv.innerHTML = `<div class="text-slate-400 italic">Loading jobs...</div>`;
 
         try {
@@ -495,21 +495,21 @@ const app = {
             jobs.forEach(j => {
                 const card = document.createElement('div');
                 card.className = 'glass-panel rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col gap-4';
-                
+
                 const dateStr = new Date(j.created_at).toLocaleDateString();
 
                 const topDiv = document.createElement('div');
                 topDiv.className = 'flex justify-between items-start';
-                
+
                 const infoDiv = document.createElement('div');
                 const title = document.createElement('h4');
                 title.className = 'font-bold text-lg text-primary';
                 title.textContent = `Need: ${j.service_type}`;
-                
+
                 const desc = document.createElement('p');
                 desc.className = 'text-slate-600 mt-1';
                 desc.textContent = `"${j.description}"`;
-                
+
                 const loc = document.createElement('p');
                 loc.className = 'text-xs text-slate-500 mt-1';
                 loc.textContent = `📍 ${j.location || 'Unknown'}`;
@@ -574,7 +574,7 @@ const app = {
     async fetchCustomerJobs() {
         const listDiv = document.getElementById('my-jobs-list');
         if (!listDiv) return;
-        
+
         listDiv.innerHTML = `<div class="text-slate-400 italic">Loading your jobs...</div>`;
 
         try {
@@ -590,15 +590,15 @@ const app = {
             jobs.forEach(j => {
                 const card = document.createElement('div');
                 card.className = 'glass-panel rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col gap-3';
-                
+
                 const title = document.createElement('h4');
                 title.className = 'font-bold text-lg text-primary';
                 title.textContent = j.service_type;
-                
+
                 const statusBadge = document.createElement('span');
                 statusBadge.className = `text-xs font-bold px-2 py-1 rounded-full uppercase tracking-widest self-start ${j.status === 'open' ? 'bg-yellow-100 text-yellow-800' : j.status === 'accepted' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`;
                 statusBadge.textContent = j.status;
-                
+
                 card.appendChild(statusBadge);
                 card.appendChild(title);
 
@@ -681,12 +681,12 @@ const app = {
     showReviewModal(jobId, workerId) {
         const modal = document.getElementById('review-modal');
         if (!modal) return;
-        
+
         document.getElementById('rev-job-id').value = jobId;
         document.getElementById('rev-worker-id').value = workerId;
         document.getElementById('rev-text').value = '';
         this.setRating(0);
-        
+
         modal.classList.remove('hidden');
     },
 
@@ -747,7 +747,7 @@ const app = {
             try {
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
-                
+
                 // Save coordinates if hidden fields exist
                 const latField = document.getElementById('w-lat');
                 const lngField = document.getElementById('w-lng');
@@ -756,7 +756,7 @@ const app = {
 
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
                 const data = await res.json();
-                
+
                 const loc = data.address.city || data.address.town || data.address.village || data.address.suburb || "Unknown";
                 if (input) input.value = loc;
             } catch (e) {
@@ -785,7 +785,7 @@ const app = {
             mapContainer.style.display = 'block';
             btnMap.className = 'flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold transition-all shadow-sm';
             btnList.className = 'flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-all';
-            
+
             this.initMap();
         } else {
             listDiv.style.display = 'grid';
@@ -812,7 +812,7 @@ const app = {
 
     updateMapMarkers() {
         if (!this.map) return;
-        
+
         // Clear existing markers
         this.markers.forEach(m => this.map.removeLayer(m));
         this.markers = [];
@@ -885,7 +885,7 @@ const app = {
     async fetchWorkers() {
         const listDiv = document.getElementById('workers-list');
         if (!listDiv) return;
-        
+
         listDiv.innerHTML = `<div class="text-slate-400 italic">Loading workers...</div>`;
 
         const serviceElem = document.getElementById('u-service');
@@ -918,7 +918,7 @@ const app = {
             workers.forEach(w => {
                 const card = document.createElement('div');
                 card.className = 'glass-panel rounded-xl p-6 shadow-sm border border-slate-200 flex flex-col gap-4 hover:shadow-md transition-all';
-                
+
                 const headerDiv = document.createElement('div');
                 headerDiv.className = 'flex justify-between items-start';
 
@@ -942,10 +942,10 @@ const app = {
                 if (w.review_count > 0) {
                     const ratingSpan = document.createElement('div');
                     ratingSpan.className = 'text-sm mb-1 flex items-center gap-1';
-                    
+
                     const avg = parseFloat(w.avg_rating);
                     const stars = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
-                    
+
                     ratingSpan.innerHTML = `
                         <span class="text-yellow-500 font-bold">${stars}</span>
                         <span class="text-slate-600 font-medium">${avg.toFixed(1)}</span>
@@ -1009,7 +1009,7 @@ const app = {
                 if (w.voice_note || w.video) {
                     const mediaDiv = document.createElement('div');
                     mediaDiv.className = 'flex flex-col gap-4 mt-2 pt-4 border-t border-slate-100';
-                    
+
                     if (w.voice_note) {
                         const auDiv = document.createElement('div');
                         auDiv.className = 'flex flex-col gap-2';
@@ -1044,15 +1044,15 @@ const app = {
     async handleWorkerEdit(e) {
         e.preventDefault();
         const btn = document.getElementById('btn-update-worker');
-        if(btn) { btn.innerHTML = "Saving..."; btn.disabled = true; }
+        if (btn) { btn.innerHTML = "Saving..."; btn.disabled = true; }
 
         const formElement = document.getElementById('worker-edit-form');
-        
+
         // Ensure we have lat/lng
         const lat = document.getElementById('w-lat').value;
         const lng = document.getElementById('w-lng').value;
         const location = document.getElementById('edit-w-loc').value;
-        
+
         if (!lat || !lng) {
             const coords = await this.geocodeAddress(location);
             if (coords) {
@@ -1068,7 +1068,7 @@ const app = {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (res.ok) {
                 alert("Profile updated successfully!");
                 window.location.reload();
@@ -1079,7 +1079,7 @@ const app = {
         } catch (err) {
             alert('Connection Error.');
         } finally {
-            if(btn) { btn.innerHTML = "Save Changes"; btn.disabled = false; }
+            if (btn) { btn.innerHTML = "Save Changes"; btn.disabled = false; }
         }
     },
 
@@ -1089,19 +1089,19 @@ const app = {
         const rec = new SpeechRecognition();
         const lang = document.documentElement.lang || 'en';
         rec.lang = this.getSpeechLangCode(lang);
-        
+
         const btn = document.getElementById('btn-record-resume');
         const display = document.getElementById('voice-resume-display');
-        
+
         rec.onstart = () => {
             btn.innerHTML = `<span class="material-symbols-outlined animate-pulse text-red-500">mic</span> Listening...`;
             btn.disabled = true;
         };
-        
+
         rec.onresult = async (e) => {
             const transcript = e.results[0][0].transcript;
             display.innerHTML = `<p class="text-xs font-medium text-slate-700 italic">"${transcript}"</p>`;
-            
+
             // Save to server
             try {
                 const res = await fetch('/api/worker/voice-resume', {
@@ -1116,25 +1116,25 @@ const app = {
                 console.error(err);
             }
         };
-        
+
         rec.onend = () => {
             setTimeout(() => {
                 btn.innerHTML = `<span class="material-symbols-outlined text-sm">record_voice_over</span> Record New Resume`;
                 btn.disabled = false;
             }, 3000);
         };
-        
+
         rec.start();
     },
 
     // ---------------- LOCATION TRACKING ---------------- //
     locationInterval: null,
-    
+
     async toggleLocationSharing(current) {
         const newState = !current;
         if (newState) {
             if (!navigator.geolocation) return alert("Geolocation not supported");
-            
+
             const startSharing = async () => {
                 navigator.geolocation.getCurrentPosition(async (pos) => {
                     const { latitude, longitude } = pos.coords;
@@ -1145,7 +1145,7 @@ const app = {
                     });
                 }, (err) => console.error(err), { enableHighAccuracy: true });
             };
-            
+
             await startSharing();
             this.locationInterval = setInterval(startSharing, 30000); // Every 30s
             alert("Location sharing started. Customers can now track your progress.");
@@ -1165,25 +1165,25 @@ const app = {
         const modal = document.getElementById('track-modal');
         if (!modal) return;
         modal.classList.remove('hidden');
-        
+
         const updateMap = async () => {
             try {
                 const res = await fetch(`/api/jobs/${jobId}/track`);
                 if (!res.ok) throw new Error();
                 const data = await res.json();
-                
+
                 if (!data.lat || !data.lng) {
                     document.getElementById('track-last-update').innerText = "Worker not sharing location";
                     return;
                 }
-                
+
                 document.getElementById('track-worker-name').innerText = data.worker_name;
                 document.getElementById('track-worker-avatar').innerText = data.worker_name[0];
                 document.getElementById('track-call-btn').href = `tel:${data.worker_phone}`;
                 document.getElementById('track-last-update').innerText = "Updated just now";
-                
+
                 const pos = [data.lat, data.lng];
-                
+
                 if (!this.trackingMap) {
                     // Slight delay to ensure modal is visible for Leaflet to calculate size
                     setTimeout(() => {
@@ -1199,7 +1199,7 @@ const app = {
                 console.error("Tracking failed", e);
             }
         };
-        
+
         await updateMap();
         this.trackingInterval = setInterval(updateMap, 30000);
     },
@@ -1219,31 +1219,70 @@ const app = {
         const modal = document.getElementById('qr-modal');
         const container = document.getElementById('qrcode-container');
         if (!modal || !container) return;
-        
+
         container.innerHTML = '';
         const url = window.location.origin + '/complete-job/' + token;
-        
+
         new QRCode(container, {
             text: url,
             width: 200,
             height: 200,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
         });
-        
+
         modal.classList.remove('hidden');
     },
 
     closeQRModal() {
         const modal = document.getElementById('qr-modal');
         if (modal) modal.classList.add('hidden');
+    },
+
+    // ---------------- WORKER DASHBOARD ACTIONS ---------------- //
+    async toggleAvailability(current) {
+        try {
+            const res = await fetch('/api/worker/availability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_available: !current })
+            });
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                const data = await res.json();
+                alert('Update failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Connection Error');
+        }
+    },
+
+    async toggleLocationSharing(current) {
+        try {
+            const res = await fetch('/api/worker/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_sharing: !current })
+            });
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                const data = await res.json();
+                alert('Update failed: ' + (data.error || 'Unknown error'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Connection Error');
+        }
     }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
     app.init();
-    
+
     // Bind new forms if they exist
     const editForm = document.getElementById('worker-edit-form');
     if (editForm) {
