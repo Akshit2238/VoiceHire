@@ -614,10 +614,16 @@ const app = {
 
                 if (j.status === 'accepted') {
                     const completeBtn = document.createElement('button');
-                    completeBtn.className = 'bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold';
-                    completeBtn.textContent = 'Mark Completed';
-                    completeBtn.onclick = () => this.updateJobStatus(j.id, 'completed', j.worker_id);
+                    completeBtn.className = 'bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2';
+                    completeBtn.innerHTML = `<span class="material-symbols-outlined text-sm">qr_code_2</span> Complete`;
+                    completeBtn.onclick = () => this.showCompletionQR(j.completion_token);
                     actions.appendChild(completeBtn);
+
+                    const trackBtn = document.createElement('button');
+                    trackBtn.className = 'bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2';
+                    trackBtn.innerHTML = `<span class="material-symbols-outlined text-sm">location_on</span> Track`;
+                    trackBtn.onclick = () => this.trackWorker(j.id);
+                    actions.appendChild(trackBtn);
                 } else if (j.status === 'completed') {
                     const reviewBtn = document.createElement('button');
                     reviewBtn.className = 'bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold';
@@ -993,6 +999,13 @@ const app = {
                 headerDiv.appendChild(actionsWrapper);
                 card.appendChild(headerDiv);
 
+                if (w.voice_resume) {
+                    const vrDiv = document.createElement('div');
+                    vrDiv.className = 'mt-3 p-3 bg-blue-50 rounded-xl border border-blue-100 italic text-sm text-slate-700';
+                    vrDiv.innerHTML = `<span class="material-symbols-outlined text-xs align-middle mr-1">voice_chat</span> "${w.voice_resume}"`;
+                    card.appendChild(vrDiv);
+                }
+
                 if (w.voice_note || w.video) {
                     const mediaDiv = document.createElement('div');
                     mediaDiv.className = 'flex flex-col gap-4 mt-2 pt-4 border-t border-slate-100';
@@ -1068,6 +1081,163 @@ const app = {
         } finally {
             if(btn) { btn.innerHTML = "Save Changes"; btn.disabled = false; }
         }
+    },
+
+    // ---------------- VOICE RESUME ---------------- //
+    startVoiceResume() {
+        if (!SpeechRecognition) return alert("Speech recognition not supported");
+        const rec = new SpeechRecognition();
+        const lang = document.documentElement.lang || 'en';
+        rec.lang = this.getSpeechLangCode(lang);
+        
+        const btn = document.getElementById('btn-record-resume');
+        const display = document.getElementById('voice-resume-display');
+        
+        rec.onstart = () => {
+            btn.innerHTML = `<span class="material-symbols-outlined animate-pulse text-red-500">mic</span> Listening...`;
+            btn.disabled = true;
+        };
+        
+        rec.onresult = async (e) => {
+            const transcript = e.results[0][0].transcript;
+            display.innerHTML = `<p class="text-xs font-medium text-slate-700 italic">"${transcript}"</p>`;
+            
+            // Save to server
+            try {
+                const res = await fetch('/api/worker/voice-resume', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transcript })
+                });
+                if (res.ok) {
+                    btn.innerHTML = `<span class="material-symbols-outlined text-green-500">check_circle</span> Saved!`;
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        
+        rec.onend = () => {
+            setTimeout(() => {
+                btn.innerHTML = `<span class="material-symbols-outlined text-sm">record_voice_over</span> Record New Resume`;
+                btn.disabled = false;
+            }, 3000);
+        };
+        
+        rec.start();
+    },
+
+    // ---------------- LOCATION TRACKING ---------------- //
+    locationInterval: null,
+    
+    async toggleLocationSharing(current) {
+        const newState = !current;
+        if (newState) {
+            if (!navigator.geolocation) return alert("Geolocation not supported");
+            
+            const startSharing = async () => {
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    await fetch('/api/worker/location', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lat: latitude, lng: longitude })
+                    });
+                }, (err) => console.error(err), { enableHighAccuracy: true });
+            };
+            
+            await startSharing();
+            this.locationInterval = setInterval(startSharing, 30000); // Every 30s
+            alert("Location sharing started. Customers can now track your progress.");
+        } else {
+            clearInterval(this.locationInterval);
+            await fetch('/api/worker/location/stop', { method: 'POST' });
+            alert("Location sharing stopped.");
+        }
+        window.location.reload();
+    },
+
+    trackingInterval: null,
+    trackingMap: null,
+    trackingMarker: null,
+
+    async trackWorker(jobId) {
+        const modal = document.getElementById('track-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        
+        const updateMap = async () => {
+            try {
+                const res = await fetch(`/api/jobs/${jobId}/track`);
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                
+                if (!data.lat || !data.lng) {
+                    document.getElementById('track-last-update').innerText = "Worker not sharing location";
+                    return;
+                }
+                
+                document.getElementById('track-worker-name').innerText = data.worker_name;
+                document.getElementById('track-worker-avatar').innerText = data.worker_name[0];
+                document.getElementById('track-call-btn').href = `tel:${data.worker_phone}`;
+                document.getElementById('track-last-update').innerText = "Updated just now";
+                
+                const pos = [data.lat, data.lng];
+                
+                if (!this.trackingMap) {
+                    // Slight delay to ensure modal is visible for Leaflet to calculate size
+                    setTimeout(() => {
+                        this.trackingMap = L.map('track-map').setView(pos, 15);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.trackingMap);
+                        this.trackingMarker = L.marker(pos).addTo(this.trackingMap);
+                    }, 300);
+                } else {
+                    this.trackingMarker.setLatLng(pos);
+                    this.trackingMap.panTo(pos);
+                }
+            } catch (e) {
+                console.error("Tracking failed", e);
+            }
+        };
+        
+        await updateMap();
+        this.trackingInterval = setInterval(updateMap, 30000);
+    },
+
+    stopTracking() {
+        const modal = document.getElementById('track-modal');
+        if (modal) modal.classList.add('hidden');
+        clearInterval(this.trackingInterval);
+        if (this.trackingMap) {
+            this.trackingMap.remove();
+            this.trackingMap = null;
+        }
+    },
+
+    // ---------------- QR COMPLETION ---------------- //
+    showCompletionQR(token) {
+        const modal = document.getElementById('qr-modal');
+        const container = document.getElementById('qrcode-container');
+        if (!modal || !container) return;
+        
+        container.innerHTML = '';
+        const url = window.location.origin + '/complete-job/' + token;
+        
+        new QRCode(container, {
+            text: url,
+            width: 200,
+            height: 200,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+        
+        modal.classList.remove('hidden');
+    },
+
+    closeQRModal() {
+        const modal = document.getElementById('qr-modal');
+        if (modal) modal.classList.add('hidden');
     }
 };
 

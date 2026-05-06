@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="{{ session.get('lang', 'en') }}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>VoiceHire — {{ t('Welcome') }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .bg-blob { position: fixed; border-radius: 50%; filter: blur(80px); z-index: -1; }
+        .blob-1 { width: 300px; height: 300px; background: #6366f1; top: -100px; right: -100px; opacity: 0.3; }
+        .blob-2 { width: 400px; height: 400px; background: #ec4899; bottom: -150px; left: -150px; opacity: 0.2; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 overflow-hidden">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <div class="w-full max-w-md text-center">
+        <!-- Logo & Mic -->
+        <div class="mb-10">
+            <div id="mic-container" class="w-32 h-32 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6 relative">
+                <span id="mic-icon" class="material-symbols-outlined text-white text-6xl">mic</span>
+                <div id="pulse-ring" class="absolute inset-0 border-4 border-secondary rounded-full animate-ping opacity-0"></div>
+            </div>
+            <h1 class="text-3xl font-black text-white tracking-tight">VoiceHire</h1>
+        </div>
+
+        <!-- Speech Bubble -->
+        <div class="bg-white rounded-3xl p-8 shadow-2xl mb-8 relative">
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-white rotate-45"></div>
+            <p id="ai-bubble" class="text-xl font-bold text-slate-800 leading-tight">
+                {{ t('Welcome to VoiceHire') }}
+            </p>
+        </div>
+
+        <!-- Transcript -->
+        <div id="transcript-box" class="text-blue-400 font-medium h-6 mb-8 italic"></div>
+
+        <!-- Buttons -->
+        <div class="grid grid-cols-1 gap-4 w-full">
+            <button onclick="window.location.href='/role'" 
+                class="bg-white text-slate-900 font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined">person_add</span>
+                {{ t('Create New Profile') }}
+            </button>
+            <button onclick="window.location.href='/login'" 
+                class="bg-slate-800 text-white font-black py-5 rounded-2xl shadow-lg border border-white/10 flex items-center justify-center gap-3 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined">login</span>
+                {{ t('I Already Have an Account') }}
+            </button>
+        </div>
+
+        <p class="text-slate-500 text-sm mt-8">
+            {{ t('Tap a button or speak your answer') }}
+        </p>
+    </div>
+
+    <script>
+        const lang = "{{ session.get('lang', 'en') }}";
+        const speechLang = ({ 
+            hi:'hi-IN', bn:'bn-IN', te:'te-IN', mr:'mr-IN', ta:'ta-IN',
+            gu:'gu-IN', kn:'kn-IN', ml:'ml-IN', pa:'pa-IN', ur:'ur-IN',
+            or:'or-IN', as:'as-IN', en:'en-IN' 
+        })[lang] || 'en-IN';
+
+        const CREATE_KEYWORDS = ['create','new','register','profile','signup','sign up',
+            'नया','बनाओ','नई','रजिस्टर','নতুন','তৈরি','కొత్త','నమోదు','புதிய','பதிவு',
+            'नवीन','नोंदणी','ਨਵਾਂ','ਰਜਿਸਟਰ','ਨਵਾਂ','ਰਜਿਸਟਰ','નવો','હொસ','ನೋಂದಣಿ','പുതിയ','رجسٹر','ନୂଆ'];
+
+        const LOGIN_KEYWORDS = ['login','log in','existing','account','enter','signin',
+            'लॉगिन','पुराना','লগইন','లాగిన్','உள்நுழை','लॉग इन','ਲੌਗਿਨ','લૉગિન',
+            'ಲಾಗಿನ್','ലോഗിൻ','لاگ ان','ଲଗ୍ ଇନ'];
+
+        function setPulse(active) {
+            const ring = document.getElementById('pulse-ring');
+            ring.style.opacity = active ? '1' : '0';
+        }
+
+        function speak(text, onEnd) {
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = speechLang; 
+            u.rate = 0.9;
+            u.onstart = () => setPulse(true);
+            u.onend = () => {
+                setPulse(false);
+                if (onEnd) onEnd();
+            };
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(u);
+        }
+
+        function listen() {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) return;
+            const rec = new SR();
+            rec.lang = speechLang; 
+            rec.interimResults = false;
+            rec.onstart = () => {
+                document.getElementById('mic-icon').classList.add('text-secondary');
+            };
+            rec.onresult = (e) => {
+                const said = e.results[0][0].transcript.toLowerCase();
+                document.getElementById('transcript-box').textContent = '"' + said + '"';
+                handleAnswer(said);
+            };
+            rec.onend = () => {
+                document.getElementById('mic-icon').classList.remove('text-secondary');
+            };
+            rec.start();
+        }
+
+        function handleAnswer(text) {
+            if (CREATE_KEYWORDS.some(k => text.includes(k))) {
+                speak("{{ t('Creating your profile...') }}", () => window.location.href = '/role');
+            } else if (LOGIN_KEYWORDS.some(k => text.includes(k))) {
+                speak("{{ t('Logging you in...') }}", () => window.location.href = '/login');
+            } else {
+                const retry = "{{ t('I did not understand. Please say Create or Login.') }}";
+                document.getElementById('ai-bubble').textContent = retry;
+                speak(retry, () => listen());
+            }
+        }
+
+        window.onload = () => {
+            const q = "{{ t('Welcome to VoiceHire') }}. {{ t('Do you want to create a new profile or login to your existing account?') }}";
+            document.getElementById('ai-bubble').textContent = q;
+            setTimeout(() => speak(q, () => listen()), 800);
+        };
+    </script>
+</body>
+</html>

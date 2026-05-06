@@ -137,6 +137,17 @@
                         <span class="material-symbols-outlined text-[18px]">{{ 'check_circle' if worker.is_available else 'do_not_disturb_on' }}</span>
                         <span>{{ t('Available') if worker.is_available else t('Busy') }}</span>
                     </button>
+                    
+                    <button id="location-share-btn" onclick="app.toggleLocationSharing({{ 'true' if worker.is_sharing_location else 'false' }})"
+                        class="availability-pill {{ 'bg-blue-600 text-white shadow-lg shadow-blue-200' if worker.is_sharing_location else 'bg-slate-100 text-slate-500 border border-slate-200' }}">
+                        <span class="material-symbols-outlined text-[18px]">{{ 'location_on' if worker.is_sharing_location else 'location_off' }}</span>
+                        <span>{{ t('Share Location') if worker.is_sharing_location else t('Location Off') }}</span>
+                    </button>
+
+                    <a href="/scan" class="availability-pill bg-primary text-white shadow-xl shadow-slate-200">
+                        <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
+                        <span>{{ t('Scan QR') }}</span>
+                    </a>
                     <span class="vh-badge-active">{{ t('Active') }}</span>
                 </div>
             </div>
@@ -177,9 +188,28 @@
                             </div>
                         </div>
                         
-                        <button onclick="document.getElementById('edit-profile-modal').style.display='block'" class="w-full h-14 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 shadow-sm">
+                        <button onclick="document.getElementById('edit-profile-modal').style.display='block'" class="w-full h-14 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 shadow-sm mb-3">
                             <span class="material-symbols-outlined text-lg">edit</span> {{ t('Update Profile') }}
                         </button>
+
+                        <!-- Voice Resume Section -->
+                        <div class="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-secondary">mic</span>
+                                {{ t('My Voice Resume') }}
+                            </h4>
+                            <div id="voice-resume-display" class="mb-4">
+                                {% if worker.voice_resume %}
+                                    <p class="text-xs font-medium text-slate-700 italic">"{{ worker.voice_resume }}"</p>
+                                {% else %}
+                                    <p class="text-xs text-slate-400 italic">{{ t('No resume recorded yet.') }}</p>
+                                {% endif %}
+                            </div>
+                            <button id="btn-record-resume" onclick="app.startVoiceResume()" class="w-full py-3 bg-white text-secondary font-black text-xs rounded-xl border border-secondary/20 flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                <span class="material-symbols-outlined text-sm">record_voice_over</span>
+                                {{ t('Record New Resume') }}
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Portfolio Media -->

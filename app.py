@@ -2,6 +2,8 @@ import traceback
 import os
 import uuid
 import re
+import secrets
+from datetime import datetime, timedelta
 from collections import defaultdict
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -61,7 +63,7 @@ def inject_translation():
 @app.route('/set_lang/<lang_code>')
 def set_lang(lang_code):
     session['lang'] = lang_code
-    return redirect(url_for('home'))
+    return redirect(url_for('gateway'))
 
 # ---- TEMPLATE ROUTES ----
 
@@ -77,6 +79,13 @@ def home():
         else:
             return redirect(url_for('worker_dashboard'))
     return render_template('language.html')
+
+@app.route('/gateway')
+def gateway():
+    if 'user_id' in session:
+        role = session.get('role')
+        return redirect(url_for('user_dashboard' if role == 'user' else 'worker_dashboard'))
+    return render_template('gateway.html')
 
 @app.route('/role')
 def role_selection():
@@ -118,6 +127,41 @@ def worker_dashboard():
         return render_template('worker_dashboard.html', worker=worker_data)
     except Exception as e:
         return f"Database error: {e}"
+
+@app.route('/scan')
+def scan_page():
+    if 'user_id' not in session or session.get('role') != 'worker':
+        return redirect(url_for('login_page', role='worker'))
+    return render_template('scan.html')
+
+@app.route('/complete-job/<token>', methods=['GET'])
+def complete_job_via_qr(token):
+    if 'user_id' not in session or session.get('role') != 'worker':
+        session['qr_token_pending'] = token
+        return redirect(url_for('login_page', role='worker'))
+    try:
+        job_resp = supabase.table("jobs").select("*").eq("completion_token", token).execute()
+        if not job_resp.data:
+            return render_template('qr_result.html', success=False, message="Invalid or already used QR code.")
+        job = job_resp.data[0]
+        if job.get('token_expires_at'):
+            expires = datetime.fromisoformat(job['token_expires_at'].replace('Z',''))
+            if datetime.utcnow() > expires:
+                return render_template('qr_result.html', success=False, message="This QR code has expired.")
+        if job['worker_id'] != session['user_id']:
+            return render_template('qr_result.html', success=False, message="This QR code is not assigned to you.")
+        if job['status'] != 'accepted':
+            status = job['status']
+            return render_template('qr_result.html', success=False, message=f"Job is already {status}.")
+        supabase.table("jobs").update({
+            "status": "pending_confirmation",
+            "completion_token": None   # Invalidate — one-time use only
+        }).eq("id", job['id']).execute()
+        return render_template('qr_result.html', success=True,
+            message="Job marked as done! The customer will confirm to complete.")
+    except Exception as e:
+        import traceback; print(traceback.format_exc())
+        return render_template('qr_result.html', success=False, message="Server error.")
 
 # ---- AUTHENTICATION API ENDPOINTS ----
 
@@ -367,6 +411,39 @@ def edit_worker_profile():
         print("Error updating profile:\n", traceback.format_exc())
         return jsonify({'error': 'Server error'}), 500
 
+@app.route('/api/worker/voice-resume', methods=['POST'])
+def save_voice_resume():
+    if 'user_id' not in session or session.get('role') != 'worker':
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json() or {}
+    text = safe_str(data.get('resume_text', ''))
+    if not text: return jsonify({'error': 'Text required'}), 400
+    if len(text) > 1000: return jsonify({'error': 'Max 1000 characters'}), 400
+    supabase.table("workers").update({"voice_resume": text}).eq("id", session['user_id']).execute()
+    return jsonify({'message': 'Saved'}), 200
+
+@app.route('/api/worker/location', methods=['POST'])
+def update_worker_location():
+    if 'user_id' not in session or session.get('role') != 'worker':
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json() or {}
+    lat, lng = data.get('lat'), data.get('lng')
+    if lat is None or lng is None: return jsonify({'error': 'lat and lng required'}), 400
+    supabase.table("workers").update({
+        "live_lat": float(lat), "live_lng": float(lng),
+        "is_sharing_location": True, "location_updated_at": "now()"
+    }).eq("id", session['user_id']).execute()
+    return jsonify({'message': 'Updated'}), 200
+
+@app.route('/api/worker/location/stop', methods=['POST'])
+def stop_sharing_location():
+    if 'user_id' not in session or session.get('role') != 'worker':
+        return jsonify({'error': 'Unauthorized'}), 401
+    supabase.table("workers").update({
+        "is_sharing_location": False, "live_lat": None, "live_lng": None
+    }).eq("id", session['user_id']).execute()
+    return jsonify({'message': 'Stopped'}), 200
+
 @app.route('/api/worker/availability', methods=['POST'])
 def update_availability():
     if 'user_id' not in session or session['role'] != 'worker':
@@ -388,7 +465,7 @@ def get_workers():
 
     try:
         query = supabase.table("workers").select(
-            "id, name, work, location, phone, voice_note, video, is_verified, is_available, latitude, longitude"
+            "id, name, work, location, phone, voice_note, video, is_verified, is_available, latitude, longitude, voice_resume"
         )
         if work_filter and work_filter.lower() != 'all':
             query = query.ilike("work", f"%{work_filter}%")
@@ -488,7 +565,7 @@ def get_customer_jobs():
 
     user_id = session['user_id']
     try:
-        jobs_resp = supabase.table("jobs").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        jobs_resp = supabase.table("jobs").select("*, completion_token, token_expires_at").eq("user_id", user_id).order("created_at", desc=True).execute()
         jobs = jobs_resp.data
 
         # For jobs with a worker_id, fetch worker details
@@ -526,11 +603,31 @@ def accept_job(job_id):
         if job_resp.data[0]['status'] != 'open':
             return jsonify({'error': 'Job is no longer open'}), 400
 
-        supabase.table("jobs").update({"status": "accepted", "worker_id": worker_id}).eq("id", job_id).execute()
+        token = secrets.token_urlsafe(32)
+        expires = (datetime.utcnow() + timedelta(hours=48)).isoformat()
+
+        supabase.table("jobs").update({
+            "status": "accepted", "worker_id": worker_id,
+            "completion_token": token, "token_expires_at": expires
+        }).eq("id", job_id).execute()
         return jsonify({'message': 'Job accepted successfully'}), 200
     except Exception as e:
         print("Error accepting job:\n", traceback.format_exc())
         return jsonify({'error': 'Server error'}), 500
+
+@app.route('/api/jobs/<int:job_id>/track', methods=['GET'])
+def track_worker(job_id):
+    if 'user_id' not in session or session.get('role') != 'user':
+        return jsonify({'error': 'Unauthorized'}), 401
+    job = supabase.table("jobs").select("worker_id, status").eq("id", job_id).eq("user_id", session['user_id']).execute().data
+    if not job: return jsonify({'error': 'Not found'}), 404
+    if job[0]['status'] not in ['accepted', 'pending_confirmation']:
+        return jsonify({'error': 'Job not active'}), 400
+    worker = supabase.table("workers").select(
+        "name, is_sharing_location, live_lat, live_lng, location_updated_at"
+    ).eq("id", job[0]['worker_id']).execute().data
+    if not worker: return jsonify({'error': 'Worker not found'}), 404
+    return jsonify(worker[0]), 200
 
 @app.route('/api/jobs/<int:job_id>/status', methods=['POST'])
 def update_job_status(job_id):

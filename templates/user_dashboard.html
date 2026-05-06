@@ -29,6 +29,7 @@
     </script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * { font-family: 'Inter', sans-serif; }
         .glass-panel {
@@ -355,6 +356,52 @@
             <button onclick="app.submitReviewFromModal()" class="w-full h-15 bg-primary text-white rounded-2xl font-black text-lg hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-slate-200">
                 {{ t('Post My Review') }}
             </button>
+        </div>
+    </div>
+
+    <!-- ═══ QR COMPLETION MODAL ═══ -->
+    <div id="qr-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-in zoom-in duration-300 text-center">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-black text-slate-800">{{ t('Job Completion QR') }}</h3>
+                <button onclick="app.closeQRModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <p class="text-slate-500 text-sm mb-6">{{ t('Worker must scan this to complete the job') }}</p>
+            <div id="qrcode-container" class="bg-white p-4 rounded-2xl border-2 border-slate-100 inline-block mx-auto mb-6"></div>
+            <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest">{{ t('Expires in 48 hours') }}</p>
+        </div>
+    </div>
+
+    <!-- ═══ TRACKING MODAL ═══ -->
+    <div id="track-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-[32px] p-4 shadow-2xl animate-in slide-in-from-bottom duration-500 overflow-hidden">
+            <div class="flex justify-between items-center p-4">
+                <div>
+                    <h3 class="text-xl font-black text-slate-800">{{ t('Live Worker Tracking') }}</h3>
+                    <p id="track-status" class="text-xs font-bold text-green-600 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        {{ t('Live Updates Active') }}
+                    </p>
+                </div>
+                <button onclick="app.stopTracking()" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div id="track-map" class="w-full h-80 rounded-2xl bg-slate-100 mb-2"></div>
+            <div class="p-4 flex items-center justify-between bg-slate-50 rounded-2xl">
+                <div class="flex items-center gap-3">
+                    <div id="track-worker-avatar" class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary font-black">?</div>
+                    <div>
+                        <p id="track-worker-name" class="font-black text-slate-800 text-sm">--</p>
+                        <p id="track-last-update" class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Waiting for update...</p>
+                    </div>
+                </div>
+                <a id="track-call-btn" href="#" class="w-10 h-10 flex items-center justify-center rounded-xl bg-primary text-white">
+                    <span class="material-symbols-outlined text-sm">call</span>
+                </a>
+            </div>
         </div>
     </div>
 
