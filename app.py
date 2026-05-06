@@ -828,11 +828,9 @@ def create_booking():
         if conflict.data:
             return jsonify({'error': 'This slot is already booked. Please choose another.'}), 409
 
-        booking_id = str(uuid.uuid4())
-        qr_token   = make_qr_token(booking_id)
-
+        qr_token   = uuid.uuid4().hex
+        
         insert_resp = supabase.table("bookings").insert({
-            "id":          booking_id,
             "customer_id": customer_id,
             "worker_id":   worker_id,
             "date":        date_str,
@@ -843,10 +841,12 @@ def create_booking():
         }).execute()
 
         booking = insert_resp.data[0]
+        new_id  = booking['id']
+        
         return jsonify({
             'message':    'Booking confirmed!',
-            'booking_id': booking_id,
-            'redirect':   url_for('booking_detail_page', booking_id=booking_id)
+            'booking_id': new_id,
+            'redirect':   url_for('booking_detail_page', booking_id=new_id)
         }), 201
 
     except Exception as e:
@@ -960,8 +960,8 @@ def checkin_booking(booking_id):
         if booking['status'] != 'Booked':
             return jsonify({'error': f"Cannot check in. Current status: {booking['status']}"}), 400
 
-        if not verify_qr_token(booking_id, token):
-            return jsonify({'error': 'Invalid or tampered QR code'}), 403
+        if token != booking['qr_token']:
+            return jsonify({'error': 'Invalid or expired QR code'}), 403
 
         supabase.table("bookings") \
             .update({"status": "Work Started", "updated_at": datetime.utcnow().isoformat()}) \

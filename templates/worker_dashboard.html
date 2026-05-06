@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}"/>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -78,6 +79,10 @@
             <button class="vh-nav-item active w-full" onclick="window.location.href='/dashboard/worker'">
                 <span class="material-symbols-outlined">work</span>
                 <span>{{ t('My Jobs') }}</span>
+            </button>
+            <button class="vh-nav-item w-full" onclick="openScanner()">
+                <span class="material-symbols-outlined">qr_code_scanner</span>
+                <span>{{ t('QR Scanner') }}</span>
             </button>
             <button class="vh-nav-item w-full" onclick="window.location.href='/bookings'">
                 <span class="material-symbols-outlined">calendar_month</span>
@@ -339,6 +344,10 @@
             <span class="material-symbols-outlined">work</span>
             <span>{{ t('Jobs') }}</span>
         </button>
+        <button class="vh-bottom-nav-item" onclick="openScanner()">
+            <span class="material-symbols-outlined">qr_code_scanner</span>
+            <span>{{ t('Scan') }}</span>
+        </button>
         <button class="vh-bottom-nav-item" onclick="window.location.href='/bookings'">
             <span class="material-symbols-outlined">calendar_month</span>
             <span>{{ t('Bookings') }}</span>
@@ -410,6 +419,88 @@
                 container.innerHTML = `<p class="text-white/60 text-sm">Could not load bookings.</p>`;
             }
         }
+
+        // ── QR Scanner Logic ──
+        let html5QrCode = null;
+
+        function openScanner() {
+            document.getElementById('scanner-overlay').classList.add('open');
+            html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                onScanFailure
+            ).catch(err => {
+                alert("Camera access denied or error: " + err);
+            });
+        }
+
+        function closeScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('scanner-overlay').classList.remove('open');
+                    html5QrCode = null;
+                }).catch(err => {
+                    document.getElementById('scanner-overlay').classList.remove('open');
+                });
+            } else {
+                document.getElementById('scanner-overlay').classList.remove('open');
+            }
+        }
+
+        async function onScanSuccess(decodedText) {
+            try {
+                const data = JSON.parse(decodedText);
+                if (!data.bid || !data.tok) {
+                    alert("Invalid QR Code format.");
+                    return;
+                }
+
+                // Stop scanner
+                await html5QrCode.stop();
+                document.getElementById('scanner-overlay').classList.remove('open');
+
+                // Call check-in API
+                const res = await fetch(`/api/bookings/${data.bid}/checkin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: data.tok })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    alert("✓ " + result.message);
+                    window.location.reload();
+                } else {
+                    alert("⚠ " + (result.error || "Check-in failed"));
+                    openScanner(); // restart if failed?
+                }
+            } catch (e) {
+                console.error("Scan error:", e);
+            }
+        }
+
+        function onScanFailure(error) {
+            // Silence is golden
+        }
     </script>
+
+    <!-- Scanner Overlay -->
+    <div id="scanner-overlay" class="fixed inset-0 bg-black/90 z-[200] hidden items-center justify-center flex-col p-6 backdrop-blur-xl">
+        <div class="text-center mb-8">
+            <h3 class="text-white font-black text-2xl mb-2">Scan Customer QR</h3>
+            <p class="text-white/60 text-sm">Align the QR code within the frame to check in</p>
+        </div>
+        <div id="qr-reader" class="w-full max-w-[340px] rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl"></div>
+        <button onclick="closeScanner()" class="mt-10 h-14 px-10 bg-white/10 text-white font-black rounded-2xl hover:bg-white/20 transition-all border border-white/10">
+            Cancel
+        </button>
+    </div>
+
+    <style>
+        #scanner-overlay.open { display: flex; }
+        #qr-reader__scan_region { background: white !important; }
+        #qr-reader__dashboard { display: none !important; }
+    </style>
 </body>
 </html>
