@@ -1057,7 +1057,8 @@ def create_booking():
             "date":        date_str,
             "time_slot":   time_slot,
             "notes":       notes,
-            "status":      "Pending"
+            "status":      "Pending",
+            "qr_token":    secrets.token_hex(16) # Satisfy NOT NULL constraint
         }
         
         insert_resp = supabase.table("bookings").insert(insert_data).execute()
