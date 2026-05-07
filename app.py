@@ -1073,8 +1073,12 @@ def create_booking():
         }), 201
     except Exception as e:
         err_msg = str(e)
-        print("Error in create_booking:\n", traceback.format_exc())
-        return jsonify({'error': f'Server error: {err_msg}'}), 500
+        tb = traceback.format_exc()
+        print(f"DEBUG: create_booking failed. Error: {err_msg}\n{tb}")
+        return jsonify({
+            'error': f'Server Error: {err_msg}',
+            'traceback': tb
+        }), 500
 
 
 @app.route('/api/bookings', methods=['GET'])
