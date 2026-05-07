@@ -1052,16 +1052,17 @@ def create_booking():
             return jsonify({'error': 'This slot is already booked. Please choose another.'}), 409
 
         insert_data = {
-            "customer_id": customer_id,
-            "worker_id":   worker_id,
+            "customer_id": int(customer_id) if str(customer_id).isdigit() else customer_id,
+            "worker_id":   int(worker_id) if str(worker_id).isdigit() else worker_id,
             "date":        date_str,
             "time_slot":   time_slot,
             "notes":       notes,
             "status":      "Pending",
-            "qr_token":    secrets.token_hex(16) # Satisfy NOT NULL constraint
+            "qr_token":    str(uuid.uuid4().hex) # Use UUID string for token
         }
         
-        insert_resp = supabase.table("bookings").insert(insert_data).execute()
+        # Use list for insert to be extra safe with some client versions
+        insert_resp = supabase.table("bookings").insert([insert_data]).execute()
         if not insert_resp.data:
             return jsonify({'error': 'Failed to create booking record'}), 500
 
