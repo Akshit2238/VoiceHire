@@ -1077,8 +1077,9 @@ def create_booking():
             'redirect':   url_for('booking_detail_page', booking_id=new_id)
         }), 201
     except Exception as e:
+        err_msg = str(e)
         print("Error in create_booking:\n", traceback.format_exc())
-        return jsonify({'error': 'Server error during booking'}), 500
+        return jsonify({'error': f'Server error: {err_msg}'}), 500
 
 
 @app.route('/api/bookings', methods=['GET'])
