@@ -216,14 +216,9 @@ def complete_job_via_qr(token):
 
 @app.route('/api/auth/signup/user', methods=['POST'])
 def signup_user():
-    try:
-        data = request.get_json() or {}
-    except Exception:
-        return jsonify({'error': 'Invalid JSON data'}), 400
-
-    name = safe_str(data.get('name'))
-    phone = safe_str(data.get('phone'))
-    password = safe_str(data.get('password'))
+    name = safe_str(request.form.get('name'))
+    phone = safe_str(request.form.get('phone'))
+    password = safe_str(request.form.get('password'))
 
     if not all([name, phone, password]):
         return jsonify({'error': 'All fields are required'}), 400
