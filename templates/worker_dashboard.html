@@ -103,17 +103,15 @@
             <span class="text-xl font-black tracking-tighter">VoiceHire</span>
         </div>
         <nav class="vh-sidebar-nav p-4 space-y-1">
-            <button class="vh-nav-item active w-full" onclick="window.location.href='/dashboard/worker'">
+            <button class="vh-nav-item active w-full" onclick="switchTab('jobs')">
                 <span class="material-symbols-outlined">work</span>
                 <span>{{ t('My Jobs') }}</span>
             </button>
-            <button class="vh-nav-item w-full"
-                onclick="document.getElementById('profile-section').scrollIntoView({behavior:'smooth'})">
+            <button class="vh-nav-item w-full" onclick="switchTab('profile')">
                 <span class="material-symbols-outlined">account_circle</span>
-                <span>{{ t('My Profile') }}</span>
+                <span>{{ t('Update Profile') }}</span>
             </button>
-            <button class="vh-nav-item w-full"
-                onclick="document.getElementById('portfolio-section').scrollIntoView({behavior:'smooth'})">
+            <button class="vh-nav-item w-full" onclick="switchTab('portfolio')">
                 <span class="material-symbols-outlined">perm_media</span>
                 <span>{{ t('Portfolio') }}</span>
             </button>
@@ -167,7 +165,7 @@
         <main class="vh-page-content max-w-6xl mx-auto py-8 px-4 sm:px-8 space-y-10">
 
             <!-- Welcome -->
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div id="welcome-section" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                 <div class="space-y-1">
                     <h2 class="text-4xl font-black text-primary tracking-tight">{{ t('Welcome,') }} {{
                         worker.name.split(' ')[0] }}!</h2>
@@ -216,19 +214,22 @@
                 </div>
             </section>
 
-            <!-- ═══ TWO-PANE LAYOUT ═══ -->
-            <div class="vh-two-pane">
+            <!-- ═══ TWO-PANE LAYOUT (JOBS VIEW) ═══ -->
+            <div id="jobs-pane" class="vh-two-pane">
 
                 <!-- LEFT PANE — Profile Card -->
-                <div class="vh-pane-left" id="profile-section">
+                <div class="vh-pane-left" id="profile-snapshot-section">
 
                     <!-- Profile Snapshot -->
                     <div class="glass-panel rounded-[32px] p-8 border-2 border-secondary/5 mb-6">
                         <div class="flex flex-col items-center text-center mb-8">
-                            <div
-                                class="w-24 h-24 rounded-3xl bg-secondary/10 flex items-center justify-center text-secondary mb-5 border-2 border-secondary/20 shadow-xl shadow-secondary/5">
+                            <div class="w-24 h-24 rounded-3xl bg-secondary/10 flex items-center justify-center text-secondary mb-5 border-2 border-secondary/20 shadow-xl shadow-secondary/5 overflow-hidden">
+                                {% if worker.profile_pic %}
+                                <img src="{{ url_for('static', filename=worker.profile_pic) }}" class="w-full h-full object-cover">
+                                {% else %}
                                 <span class="material-symbols-outlined text-6xl"
                                     style="font-variation-settings:'FILL' 1">person</span>
+                                {% endif %}
                             </div>
                             <h3
                                 class="text-2xl font-black tracking-tight text-slate-900 flex items-center justify-center gap-2">
@@ -259,7 +260,7 @@
                             </div>
                         </div>
 
-                        <button onclick="document.getElementById('edit-profile-modal').style.display='block'"
+                        <button onclick="switchTab('profile')"
                             class="w-full h-14 bg-slate-100 hover:bg-slate-200 text-slate-800 font-black rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 shadow-sm mb-3">
                             <span class="material-symbols-outlined text-lg">edit</span> {{ t('Update Profile') }}
                         </button>
@@ -286,154 +287,7 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- Portfolio Media -->
-                    {% if worker.voice_note or worker.video %}
-                    <div class="glass-panel rounded-[32px] p-8 border border-secondary/5" id="portfolio-section">
-                        <h3 class="font-black text-lg flex items-center gap-3 mb-6">
-                            <div
-                                class="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
-                                <span class="material-symbols-outlined text-xl"
-                                    style="font-variation-settings:'FILL' 1">perm_media</span>
-                            </div>
-                            {{ t('Portfolio') }}
-                        </h3>
-
-                        {% if worker.voice_note %}
-                        <div class="mb-8">
-                            <label
-                                class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-sm text-secondary">mic</span>{{ t('Voice
-                                Introduction') }}
-                            </label>
-                            <audio controls src="{{ url_for('static', filename=worker.voice_note) }}"></audio>
-                        </div>
-                        {% endif %}
-
-                        {% if worker.video %}
-                        <div>
-                            <label
-                                class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-sm text-secondary">videocam</span>{{ t('Work
-                                Showcase') }}
-                            </label>
-                            <video controls preload="metadata"
-                                src="{{ url_for('static', filename=worker.video) }}"></video>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
                 </div>
-
-                <!-- Edit Profile Modal -->
-                <div id="edit-profile-modal" style="display:none;"
-                    class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <div
-                        class="bg-white rounded-[32px] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in duration-300">
-                        <div class="p-8 sm:p-10">
-                            <div class="flex justify-between items-center mb-10">
-                                <h3 class="text-3xl font-black tracking-tight text-primary">{{ t('Edit Profile') }}</h3>
-                                <button onclick="document.getElementById('edit-profile-modal').style.display='none'"
-                                    class="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:text-red-500 transition-colors">
-                                    <span class="material-symbols-outlined">close</span>
-                                </button>
-                            </div>
-                            <form id="worker-edit-form" enctype="multipart/form-data" class="space-y-8">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                                    <div class="space-y-2">
-                                        <label
-                                            class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{
-                                            t('Full Name') }}</label>
-                                        <input type="text" name="name" value="{{ worker.name }}" required
-                                            class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label
-                                            class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{
-                                            t('Work Type') }}</label>
-                                        <input type="text" name="work" value="{{ worker.work }}" required
-                                            class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label
-                                            class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{
-                                            t('Location') }}</label>
-                                        <div class="relative">
-                                            <input type="text" name="location" id="edit-w-loc"
-                                                value="{{ worker.location }}" required
-                                                class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 pr-12 font-semibold">
-                                            <button type="button" onclick="app.detectLocation('edit-w-loc')"
-                                                class="absolute right-4 top-4 text-secondary">
-                                                <span class="material-symbols-outlined">my_location</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label
-                                            class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{
-                                            t('Phone') }}</label>
-                                        <input type="tel" name="phone" value="{{ worker.phone }}" required
-                                            pattern="[6-9][0-9]{9}"
-                                            class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
-                                    </div>
-                                </div>
-                                <div class="space-y-2">
-                                    <label
-                                        class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{
-                                        t('Security (New Password)') }}</label>
-                                    <input type="password" name="password" minlength="6"
-                                        placeholder="{{ t('Keep empty to stay the same') }}"
-                                        class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
-                                </div>
-
-                                <div class="bg-slate-50/80 rounded-[24px] p-6 space-y-6 border border-slate-200">
-                                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{{
-                                        t('Update Media') }}</h4>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                        <div class="space-y-1.5">
-                                            <label class="text-[10px] font-black text-slate-500">{{ t('Voice Note')
-                                                }}</label>
-                                            <input type="file" name="voice_note" accept="audio/*"
-                                                class="w-full text-xs">
-                                        </div>
-                                        <div class="space-y-1.5">
-                                            <label class="text-[10px] font-black text-slate-500">{{ t('Video Pitch')
-                                                }}</label>
-                                            <input type="file" name="video" accept="video/*" class="w-full text-xs">
-                                        </div>
-                                        <div class="sm:col-span-2 space-y-1.5">
-                                            <label class="text-[10px] font-black text-slate-500">{{ t('Profile Picture')
-                                                }}</label>
-                                            <input type="file" name="profile_pic" accept="image/*" class="w-full text-xs">
-                                        </div>
-                                        <div class="sm:col-span-2 space-y-1.5">
-                                            <label class="text-[10px] font-black text-slate-500">{{ t('Identity Proof')
-                                                }}</label>
-                                            <input type="file" name="id_proof" accept="image/*" class="w-full text-xs">
-                                            {% if worker.id_proof_path %}
-                                            <p
-                                                class="text-[10px] text-green-600 font-bold flex items-center gap-1.5 mt-2">
-                                                <span class="material-symbols-outlined text-sm"
-                                                    style="font-variation-settings:'FILL' 1">check_circle</span> {{
-                                                t('Verified ID Uploaded') }}
-                                            </p>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <input type="hidden" name="latitude" id="w-lat" value="{{ worker.latitude or '' }}">
-                                <input type="hidden" name="longitude" id="w-lng" value="{{ worker.longitude or '' }}">
-
-                                <button type="submit" id="btn-update-worker"
-                                    class="w-full h-16 bg-primary text-white font-black rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-2xl shadow-slate-200">
-                                    {{ t('Save All Changes') }}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
 
                 <!-- RIGHT PANE — Jobs Feed -->
                 <div class="vh-pane-right">
@@ -470,29 +324,154 @@
                         </div>
                     </div>
                 </div>
-
             </div>
+
+            <!-- Profile Settings Section -->
+            <section id="profile-edit-section" style="display:none;" class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xl font-black tracking-tight text-primary">{{ t('Update Profile') }}</h3>
+                </div>
+                <div class="glass-panel rounded-[32px] p-8">
+                    <form id="worker-edit-form" enctype="multipart/form-data" class="space-y-8">
+                        <!-- Profile Pic Preview -->
+                        <div class="flex flex-col items-center gap-4 mb-8">
+                            <div class="relative group">
+                                <div class="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden bg-slate-100 flex items-center justify-center text-slate-300">
+                                    {% if worker.profile_pic %}
+                                    <img id="profile-preview" src="{{ url_for('static', filename=worker.profile_pic) }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <span id="profile-placeholder" class="material-symbols-outlined text-5xl">person</span>
+                                    <img id="profile-preview" class="w-full h-full object-cover hidden">
+                                    {% endif %}
+                                </div>
+                                <label class="absolute bottom-1 right-1 w-10 h-10 bg-secondary text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
+                                    <span class="material-symbols-outlined text-sm">edit</span>
+                                    <input type="file" name="profile_pic" accept="image/*" class="hidden" onchange="previewImage(this)">
+                                </label>
+                            </div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ t('Change Photo') }}</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Full Name') }}</label>
+                                <input type="text" name="name" value="{{ worker.name }}" required
+                                    class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Work Type') }}</label>
+                                <input type="text" name="work" value="{{ worker.work }}" required
+                                    class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Location') }}</label>
+                                <div class="relative">
+                                    <input type="text" name="location" id="edit-w-loc" value="{{ worker.location }}" required
+                                        class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 pr-12 font-semibold">
+                                    <button type="button" onclick="app.detectLocation('edit-w-loc')" class="absolute right-4 top-4 text-secondary">
+                                        <span class="material-symbols-outlined">my_location</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Phone') }}</label>
+                                <input type="tel" name="phone" value="{{ worker.phone }}" required pattern="[6-9][0-9]{9}"
+                                    class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{{ t('Security (New Password)') }}</label>
+                            <input type="password" name="password" minlength="6" placeholder="{{ t('Keep empty to stay the same') }}"
+                                class="w-full h-14 rounded-2xl border-slate-200 bg-slate-50/50 focus:ring-2 focus:ring-secondary/20 px-5 font-semibold">
+                        </div>
+
+                        <div class="bg-slate-50/80 rounded-[24px] p-6 space-y-6 border border-slate-200">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{{ t('Update Portfolio Media') }}</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-black text-slate-500">{{ t('Voice Note') }}</label>
+                                    <input type="file" name="voice_note" accept="audio/*" class="w-full text-xs">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-black text-slate-500">{{ t('Video Pitch') }}</label>
+                                    <input type="file" name="video" accept="video/*" class="w-full text-xs">
+                                </div>
+                                <div class="sm:col-span-2 space-y-1.5">
+                                    <label class="text-[10px] font-black text-slate-500">{{ t('Identity Proof') }}</label>
+                                    <input type="file" name="id_proof" accept="image/*" class="w-full text-xs">
+                                    {% if worker.id_proof_path %}
+                                    <p class="text-[10px] text-green-600 font-bold flex items-center gap-1.5 mt-2">
+                                        <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 1">check_circle</span> 
+                                        {{ t('Verified ID Uploaded') }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="latitude" id="w-lat" value="{{ worker.latitude or '' }}">
+                        <input type="hidden" name="longitude" id="w-lng" value="{{ worker.longitude or '' }}">
+
+                        <div class="flex justify-center pt-4">
+                            <button type="submit" id="btn-update-worker"
+                                class="px-12 h-15 bg-primary text-white font-black rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-2xl shadow-slate-200 flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-sm">save</span>
+                                {{ t('Save All Changes') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Portfolio Section -->
+            <section id="portfolio-full-section" style="display:none;" class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xl font-black tracking-tight text-primary">{{ t('My Portfolio') }}</h3>
+                </div>
+                <div class="glass-panel rounded-[32px] p-8 border border-secondary/5">
+                    {% if worker.voice_note or worker.video %}
+                        {% if worker.voice_note %}
+                        <div class="mb-8">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-secondary">mic</span>{{ t('Voice Introduction') }}
+                            </label>
+                            <audio controls src="{{ url_for('static', filename=worker.voice_note) }}"></audio>
+                        </div>
+                        {% endif %}
+
+                        {% if worker.video %}
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-secondary">videocam</span>{{ t('Work Showcase') }}
+                            </label>
+                            <video controls preload="metadata" src="{{ url_for('static', filename=worker.video) }}"></video>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="py-12 text-center text-slate-400 italic">
+                            {{ t('Your portfolio is empty. Go to Update Profile to add media!') }}
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
         </main>
     </div>
 
     <!-- ═══ MOBILE / TABLET BOTTOM NAV ═══ -->
     <nav class="vh-bottom-nav px-6">
-        <button class="vh-bottom-nav-item active">
+        <button class="vh-bottom-nav-item active" onclick="switchTab('jobs')">
             <span class="material-symbols-outlined">work</span>
             <span>{{ t('Jobs') }}</span>
         </button>
-        <button class="vh-bottom-nav-item"
-            onclick="document.getElementById('profile-section').scrollIntoView({behavior:'smooth'})">
+        <button class="vh-bottom-nav-item" onclick="switchTab('profile')">
             <span class="material-symbols-outlined">account_circle</span>
             <span>{{ t('Profile') }}</span>
         </button>
-        {% if worker.voice_note or worker.video %}
-        <button class="vh-bottom-nav-item"
-            onclick="document.getElementById('portfolio-section').scrollIntoView({behavior:'smooth'})">
+        <button class="vh-bottom-nav-item" onclick="switchTab('portfolio')">
             <span class="material-symbols-outlined">perm_media</span>
-            <span>{{ t('Portfolio') }}</span>
+            <span>{{ t('Media') }}</span>
         </button>
-        {% endif %}
         <button class="vh-bottom-nav-item" onclick="window.location.href='/bookings'">
             <span class="material-symbols-outlined">calendar_month</span>
             <span>{{ t('Bookings') }}</span>
@@ -505,6 +484,65 @@
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script>
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('profile-preview');
+                    const placeholder = document.getElementById('profile-placeholder');
+                    if (preview) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('hidden');
+                    }
+                    if (placeholder) placeholder.classList.add('hidden');
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function switchTab(tab) {
+            const sections = {
+                'jobs': ['welcome-section', 'pending-bookings-section', 'jobs-pane'],
+                'profile': ['profile-edit-section'],
+                'portfolio': ['portfolio-full-section']
+            };
+
+            // Hide all sections first
+            Object.values(sections).flat().forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+
+            // Show selected tab sections
+            sections[tab].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (id === 'jobs-pane') {
+                        el.style.display = 'flex';
+                    } else if (id === 'pending-bookings-section') {
+                        // Only show if list is not empty (handled by app.js usually, but we force block if needed)
+                        const list = document.getElementById('pending-bookings-list');
+                        if (list && list.children.length > 0) el.style.display = 'block';
+                    } else {
+                        el.style.display = 'block';
+                    }
+                }
+            });
+
+            // Update active states
+            document.querySelectorAll('.vh-nav-item, .vh-bottom-nav-item').forEach(btn => {
+                btn.classList.remove('active');
+                const text = btn.innerText.toLowerCase();
+                const icon = btn.querySelector('.material-symbols-outlined')?.innerText.toLowerCase();
+                
+                if (tab === 'jobs' && (text.includes('job') || icon === 'work')) btn.classList.add('active');
+                if (tab === 'profile' && (text.includes('profile') || icon === 'account_circle')) btn.classList.add('active');
+                if (tab === 'portfolio' && (text.includes('portfolio') || text.includes('media') || icon === 'perm_media')) btn.classList.add('active');
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             app.fetchJobsForWorker('{{ worker.work }}');
             app.fetchWorkerPendingBookings();

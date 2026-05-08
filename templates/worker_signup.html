@@ -184,7 +184,7 @@
                     </p>
                     <button id="btn-start-ai"
                         class="w-full h-14 bg-secondary text-white rounded-2xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all font-black text-base shadow-xl shadow-secondary/20"
-                        onclick="app.startStepByStepAI()">
+                        onclick="app.startStepByStepAI('worker')">
                         <span class="material-symbols-outlined">mic</span>
                         {{ t('Start Voice Setup') }}
                     </button>
@@ -353,6 +353,9 @@
         </div>
     </main>
 
+    <script>
+        const PAGE_LANG = "{{ session.get('lang', 'en') }}";
+    </script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
     <!-- AI Prompts for DOM Translation -->

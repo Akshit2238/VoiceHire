@@ -39,8 +39,18 @@ const app = {
 
     // Get the current language selected by the Google Translate widget
     getCurrentLang() {
+        // 1. Check Google Translate cookie (highest priority for real-time changes)
         const match = document.cookie.match(/googtrans=\/en\/([a-z]{2})/);
-        return match ? match[1] : 'en';
+        if (match) return match[1];
+
+        // 2. Check server-side session lang
+        if (typeof PAGE_LANG !== 'undefined' && PAGE_LANG) return PAGE_LANG;
+
+        // 3. Check HTML lang attribute
+        const htmlLang = document.documentElement.lang;
+        if (htmlLang && htmlLang.length === 2) return htmlLang;
+
+        return 'en';
     },
 
     // Map Google Translate code to BCP-47 for Web Speech API
@@ -192,7 +202,7 @@ const app = {
 
     // ---------------- AI CONVERSATIONAL ASSISTANT ---------------- //
 
-    startStepByStepAI() {
+    startStepByStepAI(role = 'worker') {
         if (!SpeechRecognition) {
             alert('Your browser does not support full AI features. Please use Google Chrome or a modern browser.');
             return;
@@ -200,12 +210,19 @@ const app = {
 
         aiActive = true;
         aiStep = 0;
+        this.aiRole = role;
 
         // Hide all parent containers of inputs
-        const inputs = ['w-name', 'w-work', 'w-location', 'w-phone', 'w-password'];
+        const inputs = role === 'worker' 
+            ? ['w-name', 'w-work', 'w-location', 'w-phone', 'w-password']
+            : ['us-name', 'us-phone', 'us-password'];
+            
         inputs.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.closest('.relative').style.display = 'none';
+            if (el) {
+                const parent = el.closest('.relative');
+                if (parent) parent.style.display = 'none';
+            }
         });
 
         document.getElementById('btn-start-ai').style.display = 'none';
@@ -224,7 +241,9 @@ const app = {
         anim.style.display = 'none';
         tBox.style.display = 'none';
 
-        if (aiStep < 5) {
+        const maxSteps = this.aiRole === 'worker' ? 5 : 3;
+
+        if (aiStep < maxSteps) {
             const promptStr = document.getElementById(`ai-p${aiStep}`).innerText;
             qText.innerText = promptStr;
             this.speak(promptStr, () => {
@@ -232,31 +251,65 @@ const app = {
                 this.listenForAnswer();
             });
         } else {
-            const finalPrompt = document.getElementById('ai-p5').innerText;
+            const finalPrompt = document.getElementById(`ai-p${maxSteps}`).innerText;
             qText.innerText = finalPrompt;
             this.speak(finalPrompt, () => {
-                const inputs = ['w-name', 'w-work', 'w-location', 'w-phone', 'w-password'];
+                const inputs = this.aiRole === 'worker'
+                    ? ['w-name', 'w-work', 'w-location', 'w-phone', 'w-password']
+                    : ['us-name', 'us-phone', 'us-password'];
                 inputs.forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.closest('.relative').style.display = 'block';
+                    if (el) {
+                        const parent = el.closest('.relative');
+                        if (parent) parent.style.display = 'block';
+                    }
                 });
             });
         }
     },
 
     speak(text, onEndCallback) {
-        const lang = this.getCurrentLang();
+        const langCode = this.getCurrentLang();
+        const fullLangCode = this.getSpeechLangCode(langCode);
+
+        // 1. Try Native SpeechSynthesis first (Better integration, works offline)
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel(); // Stop any current speech
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = fullLangCode;
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+
+            utterance.onend = () => { if (onEndCallback) onEndCallback(); };
+            utterance.onerror = (e) => {
+                console.warn("Native SpeechSynthesis error, falling back to Cloud TTS:", e);
+                this.cloudSpeak(text, langCode, onEndCallback);
+            };
+
+            window.speechSynthesis.speak(utterance);
+
+            // Safety timeout for mobile browsers where onend might not fire
+            setTimeout(() => {
+                if (window.speechSynthesis.speaking === false && onEndCallback) {
+                    // Already handled or failed
+                }
+            }, 5000);
+        } else {
+            this.cloudSpeak(text, langCode, onEndCallback);
+        }
+    },
+
+    // Fallback Cloud TTS using Google Translate API
+    cloudSpeak(text, lang, onEndCallback) {
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${lang}&q=${encodeURIComponent(text)}`;
         const audio = new Audio(url);
-        audio.onended = () => {
-            if (onEndCallback) onEndCallback();
-        };
+        audio.onended = () => { if (onEndCallback) onEndCallback(); };
         audio.onerror = (e) => {
-            console.error("Cloud TTS failed, falling back to instant answer mode.", e);
+            console.error("Cloud TTS failed:", e);
             if (onEndCallback) onEndCallback();
         };
-        audio.play().catch(e => {
-            console.error("Audio play blocked by browser:", e);
+        audio.play().catch(err => {
+            console.error("Audio playback blocked:", err);
             if (onEndCallback) onEndCallback();
         });
     },
@@ -393,53 +446,71 @@ const app = {
         const trimmed = text.trim();
         const retryPrompt = document.getElementById('ai-retry').innerText;
 
-        if (aiStep === 0) {
-            if (trimmed) {
-                document.getElementById('w-name').value = this.capitalize(trimmed);
-                aiStep++;
-            } else {
-                this.speak(retryPrompt, () => { this.askNextQuestion(); });
-                return;
+        if (this.aiRole === 'worker') {
+            if (aiStep === 0) {
+                if (trimmed) {
+                    document.getElementById('w-name').value = this.capitalize(trimmed);
+                    aiStep++;
+                } else {
+                    this.speak(retryPrompt, () => { this.askNextQuestion(); });
+                    return;
+                }
             }
-        }
-        else if (aiStep === 1) {
-            if (trimmed) {
-                document.getElementById('w-work').value = this.capitalize(trimmed);
-                aiStep++;
-            } else {
-                this.speak(retryPrompt, () => { this.askNextQuestion(); });
-                return;
+            else if (aiStep === 1) {
+                if (trimmed) {
+                    document.getElementById('w-work').value = this.capitalize(trimmed);
+                    aiStep++;
+                } else {
+                    this.speak(retryPrompt, () => { this.askNextQuestion(); });
+                    return;
+                }
             }
-        }
-        else if (aiStep === 2) {
-            if (trimmed) {
-                document.getElementById('w-location').value = this.capitalize(trimmed);
-                aiStep++;
-            } else {
-                this.speak(retryPrompt, () => { this.askNextQuestion(); });
-                return;
+            else if (aiStep === 2) {
+                if (trimmed) {
+                    document.getElementById('w-location').value = this.capitalize(trimmed);
+                    aiStep++;
+                } else {
+                    this.speak(retryPrompt, () => { this.askNextQuestion(); });
+                    return;
+                }
             }
-        }
-        else if (aiStep === 3) {
-            // Convert spoken number words to digits (handles "nine eight seven six..." etc.)
-            const allDigits = this.wordToDigits(text);
-
-            if (allDigits.length >= 10) {
-                // Take the last 10 digits (handles "my number is 9876543210" etc.)
-                const p = allDigits.slice(-10);
-                document.getElementById('w-phone').value = p;
-                aiStep++;
-            } else {
-                // Show what was heard so user can understand the issue
-                const tBox = document.getElementById('ai-transcript');
-                if (tBox) tBox.innerText = `Heard: "${text}" — Please say all 10 digits clearly.`;
-                this.speak(retryPrompt, () => { this.listenForAnswer(); });
-                return;
+            else if (aiStep === 3) {
+                const allDigits = this.wordToDigits(text);
+                if (allDigits.length >= 10) {
+                    document.getElementById('w-phone').value = allDigits.slice(-10);
+                    aiStep++;
+                } else {
+                    this.speak(retryPrompt, () => { this.listenForAnswer(); });
+                    return;
+                }
             }
-        }
-        else if (aiStep === 4) {
-            // Password step removed for security and accessibility
-            aiStep++;
+            else if (aiStep === 4) {
+                aiStep++;
+            }
+        } else {
+            // User Signup Flow
+            if (aiStep === 0) {
+                if (trimmed) {
+                    document.getElementById('us-name').value = this.capitalize(trimmed);
+                    aiStep++;
+                } else {
+                    this.speak(retryPrompt, () => { this.askNextQuestion(); });
+                    return;
+                }
+            }
+            else if (aiStep === 1) {
+                const allDigits = this.wordToDigits(text);
+                if (allDigits.length >= 10) {
+                    document.getElementById('us-phone').value = allDigits.slice(-10);
+                    aiStep++;
+                } else {
+                    this.speak(retryPrompt, () => { this.listenForAnswer(); });
+                    return;
+                }
+            }
+            else if (aiStep === 2) {
+                aiStep++; // Password step placeholder
+            }
         }
 
         setTimeout(() => { this.askNextQuestion(); }, 1500);

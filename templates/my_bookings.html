@@ -83,10 +83,12 @@
                 <span class="material-symbols-outlined">calendar_month</span>
                 <span>{{ t('My Bookings') }}</span>
             </button>
+            {% if session.role == 'user' %}
             <button class="vh-nav-item w-full" onclick="window.location.href='/dashboard/user#find-workers-section'">
                 <span class="material-symbols-outlined">person_search</span>
                 <span>{{ t('Find Workers') }}</span>
             </button>
+            {% endif %}
         </nav>
         <div class="vh-sidebar-footer p-4 border-t border-slate-100">
             <button class="vh-nav-item w-full text-red-500 hover:bg-red-50 hover:text-red-600" onclick="window.location.href='/logout'">
@@ -117,10 +119,12 @@
                     <h2 class="text-3xl font-black tracking-tight">📅 {{ t('My Bookings') }}</h2>
                     <p class="text-slate-500 font-medium mt-1">{{ t('Track all your scheduled jobs in one place.') }}</p>
                 </div>
+                {% if session.role == 'user' %}
                 <a href="/dashboard/user" class="flex items-center gap-2 bg-secondary text-white font-black px-5 h-11 rounded-2xl hover:opacity-90 transition-opacity text-sm shadow-lg shadow-secondary/20 self-start sm:self-center">
                     <span class="material-symbols-outlined text-base">add</span>
                     {{ t('Book a Worker') }}
                 </a>
+                {% endif %}
             </div>
 
             <!-- Filter Tabs -->
@@ -177,10 +181,12 @@
             <span class="material-symbols-outlined">calendar_month</span>
             <span>{{ t('Bookings') }}</span>
         </button>
+        {% if session.role == 'user' %}
         <button class="vh-bottom-nav-item" onclick="window.location.href='/dashboard/user'">
             <span class="material-symbols-outlined">person_search</span>
             <span>{{ t('Explore') }}</span>
         </button>
+        {% endif %}
         <button class="vh-bottom-nav-item" onclick="window.location.href='/logout'">
             <span class="material-symbols-outlined">logout</span>
             <span>{{ t('Out') }}</span>
