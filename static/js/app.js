@@ -1,3 +1,9 @@
+const getMediaUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    return `/static/${path}`;
+};
+
 let selectedRole = localStorage.getItem('voicehire_role') || 'user';
 let aiStep = 0;
 let aiActive = false;
@@ -536,7 +542,7 @@ const app = {
                 userDiv.className = 'flex items-center gap-2';
                 userDiv.innerHTML = `
                     <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 overflow-hidden">
-                        ${j.user_profile_pic ? `<img src="/static/${j.user_profile_pic}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-sm">person</span>`}
+                        ${j.user_profile_pic ? `<img src="${getMediaUrl(j.user_profile_pic)}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-sm">person</span>`}
                     </div>`;
                 const userName = document.createElement('span');
                 userName.className = 'text-sm font-medium text-slate-700';
@@ -752,7 +758,7 @@ const app = {
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary overflow-hidden">
                             ${(isWorker ? b.customer_profile_pic : b.worker_profile_pic) 
-                                ? `<img src="/static/${isWorker ? b.customer_profile_pic : b.worker_profile_pic}" class="w-full h-full object-cover">` 
+                                ? `<img src="${getMediaUrl(isWorker ? b.customer_profile_pic : b.worker_profile_pic)}" class="w-full h-full object-cover">` 
                                 : `<span class="material-symbols-outlined text-xl">calendar_month</span>`}
                         </div>
                         <div>
@@ -790,7 +796,7 @@ const app = {
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100 shadow-sm overflow-hidden">
                             ${b.customer_profile_pic 
-                                ? `<img src="/static/${b.customer_profile_pic}" class="w-full h-full object-cover">` 
+                                ? `<img src="${getMediaUrl(b.customer_profile_pic)}" class="w-full h-full object-cover">` 
                                 : `<span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">person</span>`}
                         </div>
                         <div class="flex-1 min-w-0">
@@ -1033,7 +1039,7 @@ const app = {
                 infoWrapper.className = 'flex items-center gap-4';
                 infoWrapper.innerHTML = `
                     <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden">
-                        ${w.profile_pic ? `<img src="/static/${w.profile_pic}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-3xl">person</span>`}
+                        ${w.profile_pic ? `<img src="${getMediaUrl(w.profile_pic)}" class="w-full h-full object-cover">` : `<span class="material-symbols-outlined text-3xl">person</span>`}
                     </div>
                 `;
 
@@ -1136,7 +1142,7 @@ const app = {
                         const audio = document.createElement('audio');
                         audio.controls = true;
                         audio.className = 'w-full';
-                        audio.src = `/static/${w.voice_note}`;
+                        audio.src = `${getMediaUrl(w.voice_note)}`;
                         auDiv.appendChild(audio);
                         mediaDiv.appendChild(auDiv);
                     }
@@ -1147,7 +1153,7 @@ const app = {
                         const video = document.createElement('video');
                         video.controls = true;
                         video.className = 'w-full rounded-xl border border-slate-200 shadow-sm max-h-64';
-                        video.src = `/static/${w.video}`;
+                        video.src = `${getMediaUrl(w.video)}`;
                         vidDiv.appendChild(video);
                         mediaDiv.appendChild(vidDiv);
                     }
