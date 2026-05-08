@@ -883,7 +883,7 @@ def translate_api():
 
 
 # ════════════════════════════════════════════════════════════
-#  BOOKING & QR VERIFICATION SYSTEM (from partner's codebase)
+#  BOOKING & QR VERIFICATION SYSTEM
 # ════════════════════════════════════════════════════════════
 
 TIME_SLOTS = [
@@ -906,7 +906,10 @@ def verify_qr_token(booking_id, token: str) -> bool:
     return hmac.compare_digest(expected, token)
 
 def generate_qr_base64(data: dict) -> str:
-    """Render a QR code as a base64-encoded PNG string."""
+    """
+    Render a QR code as a base64-encoded PNG string.
+    The QR payload is a compact JSON string with booking_id and token.
+    """
     payload = json.dumps(data, separators=(',', ':'))
     qr = qrcode.QRCode(
         version=2,
@@ -927,6 +930,7 @@ def generate_qr_base64(data: dict) -> str:
 
 @app.route('/bookings')
 def my_bookings_page():
+    """List of all bookings for the logged-in customer."""
     if 'user_id' not in session:
         return redirect(url_for('login_page', role='user'))
     return render_template('my_bookings.html', name=session.get('name'))
@@ -934,6 +938,7 @@ def my_bookings_page():
 
 @app.route('/bookings/<int:booking_id>')
 def booking_detail_page(booking_id):
+    """Booking detail page — shows QR code and live status."""
     if 'user_id' not in session:
         return redirect(url_for('login_page', role='user'))
     try:
@@ -944,15 +949,17 @@ def booking_detail_page(booking_id):
 
         uid = session['user_id']
         role = session.get('role')
+        # Only the customer or the worker of this booking can view it
         if booking['customer_id'] != uid and booking['worker_id'] != uid:
             return "Unauthorized", 403
 
+        # Fetch worker info (using try_select for profile_pic safety)
         w_resp = try_select("workers", "name, phone, work, profile_pic", filters={"id": booking['worker_id']})
         worker = w_resp.data[0] if w_resp.data else {}
 
+        # Fetch customer info
         c_resp = try_select("users", "name, phone, profile_pic", filters={"id": booking['customer_id']})
         customer = c_resp.data[0] if c_resp.data else {}
-
         token = make_qr_token(booking_id)
         qr_data = {"bid": booking_id, "tok": token}
         qr_b64 = generate_qr_base64(qr_data)
@@ -964,7 +971,7 @@ def booking_detail_page(booking_id):
             customer=customer,
             qr_b64=qr_b64,
             role=role,
-            is_customer=(role == 'user' and uid == booking['customer_id'])
+            is_customer=(uid == booking['customer_id'])
         )
     except Exception as e:
         print(traceback.format_exc())
@@ -973,6 +980,7 @@ def booking_detail_page(booking_id):
 
 @app.route('/book/<int:worker_id>')
 def book_worker_page(worker_id):
+    """Time-slot booking page for a specific worker."""
     if 'user_id' not in session or session.get('role') != 'user':
         return redirect(url_for('login_page', role='user'))
     try:
@@ -989,11 +997,18 @@ def book_worker_page(worker_id):
 
 @app.route('/api/bookings/slots', methods=['GET'])
 def get_available_slots():
+    """
+    GET /api/bookings/slots?worker_id=<uuid>&date=<YYYY-MM-DD>
+    Returns all slots with availability status.
+    """
     worker_id = request.args.get('worker_id', '').strip()
     date_str  = request.args.get('date', '').strip()
+
     if not worker_id or not date_str:
         return jsonify({'error': 'worker_id and date are required'}), 400
+
     try:
+        # Validate date
         datetime.strptime(date_str, '%Y-%m-%d')
     except ValueError:
         return jsonify({'error': 'date must be YYYY-MM-DD'}), 400
@@ -1014,6 +1029,11 @@ def get_available_slots():
 
 @app.route('/api/bookings', methods=['POST'])
 def create_booking():
+    """
+    POST /api/bookings
+    Body: { worker_id, date, time_slot, notes? }
+    Creates a booking and returns the booking data with QR token.
+    """
     if 'user_id' not in session or session.get('role') != 'user':
         return jsonify({'error': 'Unauthorized'}), 401
     try:
@@ -1037,10 +1057,12 @@ def create_booking():
 
     customer_id = session['user_id']
     try:
+        # Check worker exists
         w_resp = supabase.table("workers").select("id, name").eq("id", worker_id).execute()
         if not w_resp.data:
             return jsonify({'error': 'Worker not found'}), 404
 
+        # Double-booking guard
         conflict = supabase.table("bookings") \
             .select("id") \
             .eq("worker_id", worker_id) \
@@ -1058,11 +1080,10 @@ def create_booking():
             "time_slot":   time_slot,
             "notes":       notes,
             "status":      "Pending",
-            "qr_token":    str(uuid.uuid4().hex) # Use UUID string for token
+            "qr_token":    uuid.uuid4().hex
         }
         
-        # Use list for insert to be extra safe with some client versions
-        insert_resp = supabase.table("bookings").insert([insert_data]).execute()
+        insert_resp = supabase.table("bookings").insert(insert_data).execute()
         if not insert_resp.data:
             return jsonify({'error': 'Failed to create booking record'}), 500
 
@@ -1085,6 +1106,10 @@ def create_booking():
 
 @app.route('/api/bookings', methods=['GET'])
 def get_my_bookings():
+    """
+    GET /api/bookings
+    Returns bookings for the logged-in user (customer or worker).
+    """
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     uid = session['user_id']
@@ -1126,8 +1151,9 @@ def get_my_bookings():
         return jsonify([]), 200
 
 
-@app.route('/api/bookings/<int:booking_id>', methods=['GET'])
+@app.route('/api/bookings/<booking_id>', methods=['GET'])
 def get_booking(booking_id):
+    """Fetch a single booking's current status (used for polling)."""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     uid = session['user_id']
@@ -1144,10 +1170,16 @@ def get_booking(booking_id):
         return jsonify({'error': 'Server error'}), 500
 
 
-@app.route('/api/bookings/<int:booking_id>/checkin', methods=['POST'])
+@app.route('/api/bookings/<booking_id>/checkin', methods=['POST'])
 def checkin_booking(booking_id):
+    """
+    POST /api/bookings/<booking_id>/checkin
+    Body: { "token": "<qr_token>" }
+    Verifies QR token and marks booking as 'Work Started'.
+    """
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+
     try:
         data  = request.get_json() or {}
         token = safe_str(data.get('token', ''))
@@ -1163,18 +1195,27 @@ def checkin_booking(booking_id):
             return jsonify({'error': 'Unauthorized'}), 403
         if booking['status'] != 'Booked':
             return jsonify({'error': f"Cannot check in. Current status: {booking['status']}"}), 400
-        if not verify_qr_token(booking_id, token):
+        
+        # Verify token (handle both legacy HMAC and new UUID tokens)
+        if token != booking['qr_token'] and not verify_qr_token(booking_id, token):
             return jsonify({'error': 'Invalid or expired QR code'}), 403
 
-        supabase.table("bookings").update({"status": "Work Started"}).eq("id", booking_id).execute()
+        supabase.table("bookings").update({
+            "status": "Work Started",
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", booking_id).execute()
         return jsonify({'message': 'Check-in successful! Work has started.', 'status': 'Work Started'}), 200
     except Exception as e:
         print(traceback.format_exc())
         return jsonify({'error': 'Server error'}), 500
 
 
-@app.route('/api/bookings/<int:booking_id>/complete', methods=['POST'])
+@app.route('/api/bookings/<booking_id>/complete', methods=['POST'])
 def complete_booking(booking_id):
+    """
+    POST /api/bookings/<booking_id>/complete
+    Customer marks the job as done → status = 'Completed'.
+    """
     if 'user_id' not in session or session.get('role') != 'user':
         return jsonify({'error': 'Unauthorized'}), 401
     uid = session['user_id']
@@ -1187,7 +1228,10 @@ def complete_booking(booking_id):
             return jsonify({'error': 'Only the customer can mark work as complete'}), 403
         if booking['status'] != 'Work Started':
             return jsonify({'error': f"Work must be started before completing. Current: {booking['status']}"}), 400
-        supabase.table("bookings").update({"status": "Completed"}).eq("id", booking_id).execute()
+        supabase.table("bookings").update({
+            "status": "Completed",
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", booking_id).execute()
         return jsonify({'message': 'Work marked as completed!', 'status': 'Completed'}), 200
     except Exception as e:
         print(traceback.format_exc())
@@ -1196,6 +1240,7 @@ def complete_booking(booking_id):
 
 @app.route('/api/bookings/<int:booking_id>/cancel', methods=['POST'])
 def cancel_booking(booking_id):
+    """Customer cancels a booking that hasn't started yet."""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     uid = session['user_id']
@@ -1206,9 +1251,14 @@ def cancel_booking(booking_id):
         booking = resp.data[0]
         if booking['customer_id'] != uid and booking['worker_id'] != uid:
             return jsonify({'error': 'Unauthorized'}), 403
+        
         if booking['status'] in ('Completed', 'Cancelled'):
-            return jsonify({'error': 'Cannot cancel'}), 400
-        supabase.table("bookings").update({"status": "Cancelled"}).eq("id", booking_id).execute()
+            return jsonify({'error': 'Cannot cancel a completed or already cancelled booking'}), 400
+
+        supabase.table("bookings").update({
+            "status": "Cancelled",
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", booking_id).execute()
         return jsonify({'message': 'Booking cancelled.', 'status': 'Cancelled'}), 200
     except Exception as e:
         print(traceback.format_exc())
@@ -1217,6 +1267,7 @@ def cancel_booking(booking_id):
 
 @app.route('/api/bookings/<int:booking_id>/accept', methods=['POST'])
 def accept_booking(booking_id):
+    """Worker accepts a pending booking."""
     if 'user_id' not in session or session.get('role') != 'worker':
         return jsonify({'error': 'Unauthorized'}), 401
     uid = session['user_id']
@@ -1229,7 +1280,10 @@ def accept_booking(booking_id):
             return jsonify({'error': 'Unauthorized'}), 403
         if booking['status'] != 'Pending':
             return jsonify({'error': f"Cannot accept. Current status: {booking['status']}"}), 400
-        supabase.table("bookings").update({"status": "Booked"}).eq("id", booking_id).execute()
+        supabase.table("bookings").update({
+            "status": "Booked",
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", booking_id).execute()
         return jsonify({'message': 'Booking accepted!', 'status': 'Booked'}), 200
     except Exception as e:
         print(traceback.format_exc())
@@ -1238,6 +1292,7 @@ def accept_booking(booking_id):
 
 @app.route('/api/bookings/<int:booking_id>/decline', methods=['POST'])
 def decline_booking(booking_id):
+    """Worker declines a pending booking."""
     if 'user_id' not in session or session.get('role') != 'worker':
         return jsonify({'error': 'Unauthorized'}), 401
     uid = session['user_id']
@@ -1250,7 +1305,10 @@ def decline_booking(booking_id):
             return jsonify({'error': 'Unauthorized'}), 403
         if booking['status'] != 'Pending':
             return jsonify({'error': 'Cannot decline a booking that is not pending'}), 400
-        supabase.table("bookings").update({"status": "Cancelled"}).eq("id", booking_id).execute()
+        supabase.table("bookings").update({
+            "status": "Cancelled",
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", booking_id).execute()
         return jsonify({'message': 'Booking declined.', 'status': 'Cancelled'}), 200
     except Exception as e:
         print(traceback.format_exc())

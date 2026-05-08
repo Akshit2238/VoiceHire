@@ -173,6 +173,7 @@
 
     <!-- Mobile Bottom Nav -->
     <nav class="vh-bottom-nav px-6">
+
         <button class="vh-bottom-nav-item" onclick="window.location.href='/dashboard/{{ session.role }}'">
             <span class="material-symbols-outlined">home</span>
             <span>{{ t('Home') }}</span>
@@ -190,6 +191,23 @@
         <button class="vh-bottom-nav-item" onclick="window.location.href='/logout'">
             <span class="material-symbols-outlined">logout</span>
             <span>{{ t('Out') }}</span>
+=======
+        <button class="vh-bottom-nav-item" onclick="window.location.href='/dashboard/user'">
+            <span class="material-symbols-outlined">home</span>
+            <span>Home</span>
+        </button>
+        <button class="vh-bottom-nav-item active">
+            <span class="material-symbols-outlined">calendar_month</span>
+            <span>Bookings</span>
+        </button>
+        <button class="vh-bottom-nav-item" onclick="window.location.href='/dashboard/user'">
+            <span class="material-symbols-outlined">person_search</span>
+            <span>Explore</span>
+        </button>
+        <button class="vh-bottom-nav-item" onclick="window.location.href='/logout'">
+            <span class="material-symbols-outlined">logout</span>
+            <span>Out</span>
+>>>>>>> 15effcb27d7b3c30310d25c509d27ead4e484aeb
         </button>
     </nav>
 

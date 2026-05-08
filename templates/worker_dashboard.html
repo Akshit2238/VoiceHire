@@ -548,7 +548,138 @@
             app.fetchWorkerPendingBookings();
             app.fetchDashboardBookings();
         });
+
+        async function loadWorkerBookings() {
+            const container = document.getElementById('worker-upcoming-bookings');
+            if (!container) return;
+            try {
+                const res = await fetch('/api/bookings');
+                const bookings = await res.json();
+                if (!Array.isArray(bookings) || bookings.length === 0) {
+                    container.innerHTML = `<p class="text-white/60 text-sm">No upcoming bookings yet.</p>`;
+                    return;
+                }
+                // Show only upcoming (Booked / Work Started), sorted by date
+                const upcoming = bookings
+                    .filter(b => ['Pending', 'Booked', 'Work Started'].includes(b.status))
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))
+                    .slice(0, 3);
+
+                if (upcoming.length === 0) {
+                    container.innerHTML = `<p class="text-white/60 text-sm">No upcoming bookings.</p>`;
+                    return;
+                }
+
+                const slotFmt = s => {
+                    const [start, end] = s.split('-');
+                    const f = t => { const h = parseInt(t); return h > 12 ? `${h-12} PM` : `${h} AM`; };
+                    return `${f(start)} – ${f(end)}`;
+                };
+                const statusCls = s => {
+                    if (s === 'Pending') return 'bg-slate-400/20 text-slate-300';
+                    if (s === 'Booked') return 'bg-yellow-400/20 text-yellow-200';
+                    return 'bg-blue-400/20 text-blue-200';
+                };
+
+                container.innerHTML = upcoming.map(b => `
+                    <a href="/bookings/${b.id}" class="flex items-center gap-3 bg-white/10 hover:bg-white/15 rounded-2xl p-3 transition-all" style="text-decoration:none">
+                        <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-lg text-white">calendar_today</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-white font-black text-sm truncate">${b.customer_name}</p>
+                            <p class="text-white/60 text-xs">${b.date} &middot; ${slotFmt(b.time_slot)}</p>
+                        </div>
+                        <span class="text-[10px] font-black px-2 py-1 rounded-full flex-shrink-0 ${statusCls(b.status)}">${b.status}</span>
+                    </a>
+                `).join('');
+            } catch(e) {
+                container.innerHTML = `<p class="text-white/60 text-sm">Could not load bookings.</p>`;
+            }
+        }
+
+        // ── QR Scanner Logic ──
+        let html5QrCode = null;
+
+        function openScanner() {
+            document.getElementById('scanner-overlay').classList.add('open');
+            html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                onScanFailure
+            ).catch(err => {
+                alert("Camera access denied or error: " + err);
+            });
+        }
+
+        function closeScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('scanner-overlay').classList.remove('open');
+                    html5QrCode = null;
+                }).catch(err => {
+                    document.getElementById('scanner-overlay').classList.remove('open');
+                });
+            } else {
+                document.getElementById('scanner-overlay').classList.remove('open');
+            }
+        }
+
+        async function onScanSuccess(decodedText) {
+            try {
+                const data = JSON.parse(decodedText);
+                if (!data.bid || !data.tok) {
+                    alert("Invalid QR Code format.");
+                    return;
+                }
+
+                // Stop scanner
+                await html5QrCode.stop();
+                document.getElementById('scanner-overlay').classList.remove('open');
+
+                // Call check-in API
+                const res = await fetch(`/api/bookings/${data.bid}/checkin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: data.tok })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    alert("✓ " + result.message);
+                    window.location.reload();
+                } else {
+                    alert("⚠ " + (result.error || "Check-in failed"));
+                    openScanner(); // restart if failed?
+                }
+            } catch (e) {
+                console.error("Scan error:", e);
+            }
+        }
+
+        function onScanFailure(error) {
+            // Silence is golden
+        }
     </script>
+
+    <!-- Scanner Overlay -->
+    <div id="scanner-overlay" class="fixed inset-0 bg-black/90 z-[200] hidden items-center justify-center flex-col p-6 backdrop-blur-xl">
+        <div class="text-center mb-8">
+            <h3 class="text-white font-black text-2xl mb-2">Scan Customer QR</h3>
+            <p class="text-white/60 text-sm">Align the QR code within the frame to check in</p>
+        </div>
+        <div id="qr-reader" class="w-full max-w-[340px] rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl"></div>
+        <button onclick="closeScanner()" class="mt-10 h-14 px-10 bg-white/10 text-white font-black rounded-2xl hover:bg-white/20 transition-all border border-white/10">
+            Cancel
+        </button>
+    </div>
+
+    <style>
+        #scanner-overlay.open { display: flex; }
+        #qr-reader__scan_region { background: white !important; }
+        #qr-reader__dashboard { display: none !important; }
+    </style>
 </body>
 
 </html>
