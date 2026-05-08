@@ -1,5 +1,7 @@
 TRANSLATIONS = {
     'hi': {
+        "Export Data": "डेटा डाउनलोड करें",
+        "Listen Stats": "आंकड़े सुनें",
         "Find Help or": "मदद खोजें या",
         "Find Work,": "काम खोजें,",
         "Locally.": "स्थानीय रूप से।",
