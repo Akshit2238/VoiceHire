@@ -171,7 +171,7 @@
             <div class="vh-user-chip bg-slate-50 p-3 rounded-2xl flex items-center gap-3 mb-2">
                 <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary overflow-hidden">
                     {% if worker.profile_pic %}
-                    <img src="{{ url_for('static', filename=worker.profile_pic) }}" class="w-full h-full object-cover">
+                    <img src="{{ media_url(worker.profile_pic) }}" class="w-full h-full object-cover">
                     {% else %}
                     <span class="material-symbols-outlined">handyman</span>
                     {% endif %}
@@ -287,7 +287,7 @@
                         <div class="flex flex-col items-center text-center mb-8">
                             <div class="w-24 h-24 rounded-3xl bg-secondary/10 flex items-center justify-center text-secondary mb-5 border-2 border-secondary/20 shadow-xl shadow-secondary/5 overflow-hidden">
                                 {% if worker.profile_pic %}
-                                <img src="{{ url_for('static', filename=worker.profile_pic) }}" class="w-full h-full object-cover">
+                                <img src="{{ media_url(worker.profile_pic) }}" class="w-full h-full object-cover">
                                 {% else %}
                                 <span class="material-symbols-outlined text-6xl" style="font-variation-settings:'FILL' 1">person</span>
                                 {% endif %}
@@ -429,7 +429,7 @@
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 flex items-center gap-2">
                             <span class="material-symbols-outlined text-sm text-secondary">mic</span>{{ t('Voice Introduction') }}
                         </label>
-                        <audio controls src="{{ url_for('static', filename=worker.voice_note) }}" class="w-full h-10"></audio>
+                        <audio controls src="{{ media_url(worker.voice_note) }}" class="w-full h-10"></audio>
                     </div>
                     {% endif %}
 
@@ -438,7 +438,7 @@
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 flex items-center gap-2">
                             <span class="material-symbols-outlined text-sm text-secondary">videocam</span>{{ t('Work Showcase') }}
                         </label>
-                        <video controls preload="metadata" src="{{ url_for('static', filename=worker.video) }}" class="w-full rounded-xl"></video>
+                        <video controls preload="metadata" src="{{ media_url(worker.video) }}" class="w-full rounded-xl"></video>
                     </div>
                     {% endif %}
                 </div>

@@ -110,6 +110,18 @@ def inject_translation():
         return get_translation(lang, text)
     return dict(t=t)
 
+@app.template_global()
+def media_url(path):
+    """Return the correct URL for a media file.
+    If path is already an absolute URL (Supabase Storage), return it directly.
+    Otherwise prefix with /static/ for local legacy files."""
+    if not path:
+        return None
+    if path.startswith('http://') or path.startswith('https://'):
+        return path
+    # Legacy local path
+    return f'/static/{path}'
+
 @app.route('/set_lang/<lang_code>')
 def set_lang(lang_code):
     session['lang'] = lang_code
