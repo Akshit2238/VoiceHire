@@ -79,11 +79,28 @@ def try_select(table, columns, filters=None, in_filters=None):
             if in_filters:
                 for k, v in in_filters.items(): query = query.in_(k, v)
             resp = query.execute()
-            for row in resp.data: 
+            for row in resp.data:
                 if 'profile_pic' in columns: row['profile_pic'] = None
                 if 'hourly_rate' in columns: row['hourly_rate'] = 500
             return resp
         raise e
+
+
+def upload_to_supabase_storage(file_obj, folder: str) -> str:
+    """Upload a file object to Supabase Storage and return its public URL.
+    Files are stored in the 'voicehire-uploads' bucket so they persist
+    across server restarts and deployments."""
+    ext = file_obj.filename.rsplit('.', 1)[-1].lower()
+    filename = f"{folder}/{uuid.uuid4().hex}.{ext}"
+    file_bytes = file_obj.read()
+    content_type = file_obj.content_type or 'application/octet-stream'
+    supabase.storage.from_('voicehire-uploads').upload(
+        filename,
+        file_bytes,
+        {'content-type': content_type, 'upsert': 'true'}
+    )
+    public_url = f"{supabase_url}/storage/v1/object/public/voicehire-uploads/{filename}"
+    return public_url
 
 # ---- TRANSLATION CONFIG ----
 @app.context_processor
@@ -586,31 +603,24 @@ def edit_worker_profile():
         if voice_file and voice_file.filename != '':
             if not allowed_file(voice_file.filename, ALLOWED_AUDIO_EXTENSIONS):
                 return jsonify({'error': 'Invalid audio file type'}), 400
-            filename = f"{uuid.uuid4().hex}_{secure_filename(voice_file.filename)}"
-            voice_file.save(os.path.join(AUDIO_FOLDER, filename))
-            voice_path = f'uploads/audio/{filename}'
+            voice_path = upload_to_supabase_storage(voice_file, 'audio')
 
         if video_file and video_file.filename != '':
             if not allowed_file(video_file.filename, ALLOWED_VIDEO_EXTENSIONS):
                 return jsonify({'error': 'Invalid video file type'}), 400
-            filename = f"{uuid.uuid4().hex}_{secure_filename(video_file.filename)}"
-            video_file.save(os.path.join(VIDEO_FOLDER, filename))
-            video_path = f'uploads/video/{filename}'
+            video_path = upload_to_supabase_storage(video_file, 'video')
+
         id_file = request.files.get('id_proof')
         if id_file and id_file.filename != '':
             if not allowed_file(id_file.filename, ALLOWED_IMAGE_EXTENSIONS):
                 return jsonify({'error': 'Invalid image file type for ID proof'}), 400
-            filename = f"{uuid.uuid4().hex}_{secure_filename(id_file.filename)}"
-            id_file.save(os.path.join(ID_FOLDER, filename))
-            id_path = f'uploads/ids/{filename}'
+            id_path = upload_to_supabase_storage(id_file, 'ids')
 
         profile_pic = request.files.get('profile_pic')
         if profile_pic and profile_pic.filename != '':
             if not allowed_file(profile_pic.filename, ALLOWED_IMAGE_EXTENSIONS):
                 return jsonify({'error': 'Invalid image file type for profile picture'}), 400
-            filename = f"{uuid.uuid4().hex}_{secure_filename(profile_pic.filename)}"
-            profile_pic.save(os.path.join(PROFILE_PIC_FOLDER, filename))
-            profile_pic_path = f'uploads/profile_pics/{filename}'
+            profile_pic_path = upload_to_supabase_storage(profile_pic, 'profile_pics')
 
         lat = request.form.get('latitude')
         lng = request.form.get('longitude')
